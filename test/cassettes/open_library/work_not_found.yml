@@ -1,0 +1,41 @@
+---
+http_interactions:
+- request:
+    method: get
+    uri: https://openlibrary.org/works/OL999999999W.json
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      User-Agent:
+      - Faraday v2.14.0
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+  response:
+    status:
+      code: 404
+      message: Not Found
+    headers:
+      Server:
+      - nginx/1.28.2
+      Date:
+      - Thu, 19 Feb 2026 12:23:36 GMT
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Access-Control-Allow-Origin:
+      - "*"
+      Access-Control-Allow-Method:
+      - GET, OPTIONS
+      Access-Control-Max-Age:
+      - '86400'
+      X-Ol-Stats:
+      - '"IB 3 0.012 MC 3 0.001 TT 0 0.016"'
+    body:
+      encoding: UTF-8
+      string: '{"error": "notfound", "key": "/works/OL999999999W"}'
+  recorded_at: Thu, 19 Feb 2026 12:23:36 GMT
+recorded_with: VCR 6.3.1

@@ -1,0 +1,89 @@
+<div class="mx-auto max-w-2xl">
+  <h1 class="font-bold text-4xl mb-8 text-white">Request Audiobook</h1>
+
+  <div class="bg-gray-900 rounded-lg shadow p-6 border border-gray-800">
+    <div class="flex gap-6 mb-6">
+      <div class="flex-shrink-0 w-32">
+        <% if @cover_url.present? %>
+          <img
+            src="<%= @cover_url %>"
+            alt="Cover of <%= @title %>"
+            class="w-full rounded shadow"
+            onerror="this.onerror=null; this.src='<%= public_asset_path('images/no-cover.svg') %>';"
+          >
+        <% else %>
+          <div class="w-full aspect-[2/3] bg-gray-700 rounded shadow flex items-center justify-center">
+            <svg class="w-10 h-10 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+          </div>
+        <% end %>
+      </div>
+
+      <div>
+        <h2 class="font-semibold text-xl text-white"><%= @title %></h2>
+        <% if @author.present? %>
+          <p class="text-gray-400"><%= @author %></p>
+        <% end %>
+        <% if @first_publish_year.present? %>
+          <p class="text-sm text-gray-500">First published <%= @first_publish_year %></p>
+        <% end %>
+      </div>
+    </div>
+
+    <% duplicate_check = DuplicateDetectionService.check(work_id: @work_id) %>
+
+    <% if duplicate_check.block? %>
+      <div class="bg-red-900/50 border border-red-700 rounded-lg p-4 mb-6">
+        <p class="text-red-300"><%= duplicate_check.message %></p>
+      </div>
+      <div class="flex gap-4">
+        <%= link_to "Back to Search", search_path, class: "px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 font-medium rounded-lg transition" %>
+      </div>
+    <% else %>
+      <% if duplicate_check.warn? %>
+        <div class="bg-yellow-900/50 border border-yellow-700 rounded-lg p-4 mb-6">
+          <p class="text-yellow-300"><%= duplicate_check.message %></p>
+        </div>
+      <% end %>
+
+      <%= form_with url: requests_path, method: :post, class: "space-y-6" do |form| %>
+        <%= hidden_field_tag :work_id, @work_id %>
+        <%= hidden_field_tag :title, @title %>
+        <%= hidden_field_tag :author, @author %>
+        <%= hidden_field_tag :cover_url, @cover_url %>
+        <%= hidden_field_tag :first_publish_year, @first_publish_year %>
+
+        <div>
+          <label for="language" class="block text-sm font-medium text-gray-300 mb-1">Language</label>
+          <select
+            name="language"
+            id="language"
+            class="w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <% @enabled_languages.each do |name, code| %>
+              <option value="<%= code %>" <%= 'selected' if code == @default_language %>><%= name %></option>
+            <% end %>
+          </select>
+          <p class="mt-1 text-xs text-gray-500">Preferred language for this request</p>
+        </div>
+
+        <div>
+          <label for="notes" class="block text-sm font-medium text-gray-300 mb-1">Notes (optional)</label>
+          <textarea
+            name="notes"
+            id="notes"
+            rows="3"
+            class="w-full px-3 py-2 border border-gray-700 bg-gray-800 text-white rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-500"
+            placeholder="Any specific edition, narrator preference, etc."
+          ></textarea>
+        </div>
+
+        <div class="flex gap-4">
+          <%= form.submit "Request Audiobook", class: "flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition cursor-pointer" %>
+          <%= link_to "Cancel", search_path, class: "px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 font-medium rounded-lg transition" %>
+        </div>
+      <% end %>
+    <% end %>
+  </div>
+</div>

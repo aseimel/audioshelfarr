@@ -1,0 +1,29 @@
+pending_result:
+  request: pending_request
+  guid: "test-guid-1"
+  title: "The Pending Ebook - Complete Audiobook"
+  indexer: "TestIndexer"
+  size_bytes: 1073741824
+  seeders: 50
+  leechers: 5
+  magnet_url: "magnet:?xt=urn:btih:testmagnet123"
+  status: 0
+
+selected_result:
+  request: pending_request
+  guid: "test-guid-2"
+  title: "The Pending Ebook - Selected Edition"
+  indexer: "AnotherIndexer"
+  size_bytes: 524288000
+  seeders: 20
+  download_url: "http://example.com/download/test.torrent"
+  status: 1
+
+no_link_result:
+  request: pending_request
+  guid: "test-guid-3"
+  title: "The Pending Ebook - No Download Link"
+  indexer: "BadIndexer"
+  size_bytes: 104857600
+  seeders: 5
+  status: 0

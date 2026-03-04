@@ -1,0 +1,38 @@
+pending_request:
+  book: audiobook_pending
+  user: one
+  status: 0
+  retry_count: 0
+  attention_needed: false
+
+failed_request:
+  book: audiobook_failed
+  user: one
+  status: 6
+  retry_count: 3
+  attention_needed: true
+  issue_description: "Download failed after multiple attempts"
+
+not_found_retry_due:
+  book: audiobook_not_found_retry_due
+  user: one
+  status: 2
+  retry_count: 2
+  next_retry_at: <%= 1.hour.ago %>
+  attention_needed: false
+
+not_found_waiting:
+  book: audiobook_not_found_waiting
+  user: one
+  status: 2
+  retry_count: 1
+  next_retry_at: <%= 2.days.from_now %>
+  attention_needed: false
+
+max_retries_exceeded:
+  book: audiobook_max_retries
+  user: one
+  status: 2
+  retry_count: 10
+  attention_needed: true
+  issue_description: "Maximum retry attempts (10) exceeded. Manual intervention required."

@@ -1,0 +1,507 @@
+# frozen_string_literal: true
+
+require "test_helper"
+
+class RequestRetryTest < ActiveSupport::TestCase
+  setup do
+    @pending = requests(:pending_request)
+    @not_found_waiting = requests(:not_found_waiting)
+    @max_retries_exceeded = requests(:max_retries_exceeded)
+  end
+
+  # === Scopes ===
+
+  test "processable returns pending requests ordered by created_at" do
+    # Create two pending requests with specific order
+    older_book = Book.create!(title: "Older Processable", , open_library_work_id: "OL_OLDER_P")
+    newer_book = Book.create!(title: "Newer Processable", , open_library_work_id: "OL_NEWER_P")
+
+    older_request = Request.create!(book: older_book, user: users(:one), status: :pending, created_at: 2.days.ago)
+    newer_request = Request.create!(book: newer_book, user: users(:one), status: :pending, created_at: 1.day.ago)
+
+    processable = Request.processable
+    older_index = processable.find_index(older_request)
+    newer_index = processable.find_index(newer_request)
+
+    assert older_index < newer_index, "Older request should come before newer request"
+  end
+
+  test "with_issues returns attention_needed and failed requests" do
+    issues = Request.with_issues
+
+    assert_includes issues, requests(:failed_request)
+    assert_includes issues, requests(:max_retries_exceeded)
+    assert_not_includes issues, requests(:pending_request)
+    assert_not_includes issues, requests(:not_found_waiting)
+  end
+
+  test "retry_due returns not_found requests with past next_retry_at" do
+    retry_due = Request.retry_due
+
+    assert_includes retry_due, requests(:not_found_retry_due)
+    assert_not_includes retry_due, requests(:not_found_waiting)
+    assert_not_includes retry_due, requests(:pending_request)
+  end
+
+  # === schedule_retry! ===
+
+  test "schedule_retry! sets not_found status with exponential backoff" do
+    request = Request.create!(
+      book: books(:audiobook_pending),
+      user: users(:one),
+      status: :searching,
+      retry_count: 0
+    )
+
+    base_delay_hours = SettingsService.get(:retry_base_delay_hours)
+
+    freeze_time do
+      result = request.schedule_retry!
+
+      assert result
+      assert request.not_found?
+      assert_equal 1, request.retry_count
+      assert_in_delta Time.current + base_delay_hours.hours, request.next_retry_at, 1.second
+    end
+  end
+
+  test "schedule_retry! doubles delay with each retry" do
+    base_delay_hours = SettingsService.get(:retry_base_delay_hours)
+
+    # First retry: base_delay
+    request1 = Request.create!(book: books(:audiobook_pending), user: users(:one), status: :searching, retry_count: 0)
+    freeze_time do
+      request1.schedule_retry!
+      assert_in_delta Time.current + base_delay_hours.hours, request1.next_retry_at, 1.second
+    end
+
+    # Second retry: base_delay * 2
+    request2 = Request.create!(book: books(:audiobook_acquired), user: users(:one), status: :searching, retry_count: 1)
+    freeze_time do
+      request2.schedule_retry!
+      expected_delay = base_delay_hours * 2
+      assert_in_delta Time.current + expected_delay.hours, request2.next_retry_at, 1.second
+    end
+  end
+
+  test "schedule_retry! caps delay at max_delay_days" do
+    base_delay_hours = SettingsService.get(:retry_base_delay_hours)
+    max_delay_days = SettingsService.get(:retry_max_delay_days)
+    max_delay_hours = max_delay_days * 24
+
+    # Calculate retry_count that would exceed max_delay without exceeding max_retries
+    # Formula: base_delay * 2^retry_count > max_delay_hours
+    # With base=24 and max=168 (7 days), retry_count=3 gives 24*8=192 > 168
+    request = Request.create!(
+      book: books(:audiobook_pending),
+      user: users(:one),
+      status: :searching,
+      retry_count: 3
+    )
+
+    freeze_time do
+      request.schedule_retry!
+      assert_in_delta Time.current + max_delay_hours.hours, request.next_retry_at, 1.second
+    end
+  end
+
+  test "schedule_retry! flags attention when max_retries reached" do
+    max_retries = SettingsService.get(:max_retries)
+
+    request = Request.create!(
+      book: books(:audiobook_pending),
+      user: users(:one),
+      status: :searching,
+      retry_count: max_retries
+    )
+
+    result = request.schedule_retry!
+
+    assert_not result
+    assert request.attention_needed?
+    assert_includes request.issue_description, "Maximum retry attempts"
+  end
+
+  # === requeue! ===
+
+  test "requeue! moves not_found back to pending" do
+    request = requests(:not_found_retry_due)
+    assert request.not_found?
+
+    request.requeue!
+
+    assert request.pending?
+    assert_nil request.next_retry_at
+  end
+
+  # === retry_now! ===
+
+  test "retry_now! resets request for immediate processing when no selected result" do
+    request = @max_retries_exceeded
+    assert request.attention_needed?
+
+    request.retry_now!
+
+    assert request.pending?
+    assert_nil request.next_retry_at
+    assert_not request.attention_needed?
+    assert_nil request.issue_description
+  end
+
+  test "retry_now! retries download when there is a selected result and failed download" do
+    book = Book.create!(title: "Test Book", , open_library_work_id: "OL_RETRY_DL")
+    request = Request.create!(
+      book: book,
+      user: users(:one),
+      status: :downloading,
+      attention_needed: true,
+      issue_description: "Download failed"
+    )
+
+    # Create a selected search result
+    search_result = request.search_results.create!(
+      guid: "test-guid-retry",
+      title: "Test Result",
+      status: :selected,
+      download_url: "http://example.com/test.nzb"
+    )
+
+    # Create a failed download
+    failed_download = request.downloads.create!(
+      name: "Test Download",
+      status: :failed
+    )
+
+    # Retry should create a new download and queue the job
+    assert_difference -> { request.downloads.count }, 1 do
+      request.retry_now!
+    end
+
+    request.reload
+    assert request.downloading?
+    assert_not request.attention_needed?
+    assert_nil request.issue_description
+
+    # New download should be queued
+    new_download = request.downloads.order(created_at: :desc).first
+    assert new_download.queued?
+    assert_equal search_result.title, new_download.name
+  end
+
+  test "retry_now! restarts search when there is a selected result but no failed download" do
+    book = Book.create!(title: "Test Book 2", , open_library_work_id: "OL_RETRY_SEARCH")
+    request = Request.create!(
+      book: book,
+      user: users(:one),
+      status: :downloading,
+      attention_needed: true,
+      issue_description: "Something went wrong"
+    )
+
+    # Create a selected search result but no download at all
+    request.search_results.create!(
+      guid: "test-guid-search",
+      title: "Test Result",
+      status: :selected,
+      download_url: "http://example.com/test.nzb"
+    )
+
+    request.retry_now!
+
+    request.reload
+    assert request.pending?, "Should restart search when no failed download exists"
+  end
+
+  # === cancel! ===
+
+  test "cancel! marks request as failed" do
+    request = @pending
+
+    request.cancel!
+
+    assert request.failed?
+    assert_not request.attention_needed?
+    assert_nil request.issue_description
+  end
+
+  # === complete! ===
+
+  test "complete! clears attention_needed and issue_description" do
+    request = Request.create!(
+      book: books(:audiobook_pending),
+      user: users(:one),
+      status: :processing,
+      attention_needed: true,
+      issue_description: "Some issue that was resolved"
+    )
+
+    request.complete!
+
+    assert request.completed?
+    assert_not request.attention_needed?
+    assert_nil request.issue_description
+    assert request.completed_at.present?
+  end
+
+  # === select_result! ===
+
+  test "select_result! clears attention_needed and issue_description" do
+    book = Book.create!(title: "Select Test Book", , open_library_work_id: "OL_SELECT_TEST")
+    request = Request.create!(
+      book: book,
+      user: users(:one),
+      status: :searching,
+      attention_needed: true,
+      issue_description: "Manual selection required"
+    )
+
+    search_result = request.search_results.create!(
+      guid: "select-test-guid",
+      title: "Test Result",
+      status: :pending,
+      download_url: "http://example.com/test.torrent"
+    )
+
+    request.select_result!(search_result)
+
+    request.reload
+    assert request.downloading?
+    assert_not request.attention_needed?
+    assert_nil request.issue_description
+    assert search_result.reload.selected?
+  end
+
+  # === can_retry? ===
+
+  test "can_retry? returns true for pending, not_found, and failed" do
+    assert @pending.can_retry?
+    assert @not_found_waiting.can_retry?
+    assert requests(:failed_request).can_retry?
+
+    # Create a downloading request
+    downloading = Request.create!(
+      book: books(:audiobook_acquired),
+      user: users(:one),
+      status: :downloading
+    )
+    assert_not downloading.can_retry?
+  end
+
+  test "can_retry? returns true when attention_needed is true" do
+    # A downloading request normally cannot be retried
+    downloading = Request.create!(
+      book: books(:audiobook_acquired),
+      user: users(:one),
+      status: :downloading,
+      attention_needed: false
+    )
+    assert_not downloading.can_retry?
+
+    # But with attention_needed it can be retried
+    downloading.update!(attention_needed: true)
+    assert downloading.can_retry?
+  end
+
+  test "can_retry? returns false for completed requests even with attention_needed" do
+    completed = Request.create!(
+      book: books(:audiobook_acquired),
+      user: users(:one),
+      status: :completed,
+      attention_needed: true
+    )
+    assert_not completed.can_retry?
+  end
+
+  # === needs_manual_selection? ===
+
+  test "needs_manual_selection? returns true when searching with pending results" do
+    book = Book.create!(title: "Manual Select Book", , open_library_work_id: "OL_MANUAL_SEL")
+    request = Request.create!(
+      book: book,
+      user: users(:one),
+      status: :searching
+    )
+
+    # No results yet
+    assert_not request.needs_manual_selection?
+
+    # Add a pending search result
+    request.search_results.create!(
+      guid: "manual-sel-guid",
+      title: "Test Result",
+      status: :pending,
+      download_url: "http://example.com/test.torrent"
+    )
+
+    assert request.needs_manual_selection?
+  end
+
+  test "needs_manual_selection? returns false for non-searching status" do
+    book = Book.create!(title: "Non-Search Book", , open_library_work_id: "OL_NON_SEARCH")
+    request = Request.create!(
+      book: book,
+      user: users(:one),
+      status: :pending
+    )
+
+    request.search_results.create!(
+      guid: "non-search-guid",
+      title: "Test Result",
+      status: :pending,
+      download_url: "http://example.com/test.torrent"
+    )
+
+    assert_not request.needs_manual_selection?
+  end
+
+  test "needs_manual_selection? returns false when only selected results exist" do
+    book = Book.create!(title: "Selected Book", , open_library_work_id: "OL_SELECTED")
+    request = Request.create!(
+      book: book,
+      user: users(:one),
+      status: :searching
+    )
+
+    request.search_results.create!(
+      guid: "selected-guid",
+      title: "Test Result",
+      status: :selected,
+      download_url: "http://example.com/test.torrent"
+    )
+
+    assert_not request.needs_manual_selection?
+  end
+
+  # === retry_due? ===
+
+  test "retry_due? returns true when next_retry_at is past" do
+    assert requests(:not_found_retry_due).retry_due?
+    assert_not @not_found_waiting.retry_due?
+    assert_not @pending.retry_due? # No next_retry_at
+  end
+
+  # === next_retry_in_words ===
+
+  test "next_retry_in_words returns human-readable time" do
+    request = Request.create!(
+      book: books(:audiobook_acquired),
+      user: users(:one),
+      status: :not_found,
+      next_retry_at: 30.minutes.from_now
+    )
+
+    assert_match(/minutes/, request.next_retry_in_words)
+
+    request.update!(next_retry_at: 5.hours.from_now)
+    assert_match(/hours/, request.next_retry_in_words)
+
+    request.update!(next_retry_at: 3.days.from_now)
+    assert_match(/days/, request.next_retry_in_words)
+  end
+
+  test "next_retry_in_words returns nil when no retry scheduled" do
+    assert_nil @pending.next_retry_in_words
+  end
+
+  test "next_retry_in_words returns nil when retry is past" do
+    assert_nil requests(:not_found_retry_due).next_retry_in_words
+  end
+
+  # === can_be_cancelled? ===
+
+  test "can_be_cancelled? returns true for pending requests" do
+    assert @pending.can_be_cancelled?
+  end
+
+  test "can_be_cancelled? returns true for searching requests" do
+    searching = Request.create!(
+      book: books(:audiobook_pending),
+      user: users(:one),
+      status: :searching
+    )
+    assert searching.can_be_cancelled?
+  end
+
+  test "can_be_cancelled? returns true for not_found requests" do
+    assert @not_found_waiting.can_be_cancelled?
+  end
+
+  test "can_be_cancelled? returns true for failed requests" do
+    assert requests(:failed_request).can_be_cancelled?
+  end
+
+  test "can_be_cancelled? returns true for downloading requests" do
+    downloading = Request.create!(
+      book: books(:audiobook_acquired),
+      user: users(:one),
+      status: :downloading
+    )
+    assert downloading.can_be_cancelled?
+  end
+
+  test "can_be_cancelled? returns true for processing requests" do
+    processing = Request.create!(
+      book: books(:audiobook_acquired),
+      user: users(:one),
+      status: :processing
+    )
+    assert processing.can_be_cancelled?
+  end
+
+  test "can_be_cancelled? returns false for completed requests" do
+    completed = Request.create!(
+      book: books(:audiobook_acquired),
+      user: users(:one),
+      status: :completed
+    )
+    assert_not completed.can_be_cancelled?
+  end
+
+  test "cancel! removes active downloads from download client" do
+    book = Book.create!(title: "Cancel Test Book", , open_library_work_id: "OL_CANCEL_TEST")
+    request = Request.create!(
+      book: book,
+      user: users(:one),
+      status: :downloading
+    )
+
+    # Create an active download
+    download = request.downloads.create!(
+      name: "Test Download",
+      status: :downloading,
+      external_id: "test-hash-123"
+    )
+
+    request.cancel!
+
+    request.reload
+    download.reload
+
+    assert request.failed?
+    assert download.failed?
+  end
+
+  test "cancel! also cancels paused downloads" do
+    book = Book.create!(title: "Paused Cancel Book", , open_library_work_id: "OL_PAUSED_CANCEL")
+    request = Request.create!(
+      book: book,
+      user: users(:one),
+      status: :downloading
+    )
+
+    # Create a paused download
+    paused_download = request.downloads.create!(
+      name: "Paused Download",
+      status: :paused,
+      external_id: "paused-hash-123"
+    )
+
+    request.cancel!
+
+    request.reload
+    paused_download.reload
+
+    assert request.failed?
+    assert paused_download.failed?
+  end
+end
