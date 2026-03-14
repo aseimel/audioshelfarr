@@ -206,12 +206,30 @@ class ReleaseParserService
   AUDIOBOOK_PATTERNS = [
     /\baudiobook\b/i,
     /\bm4b\b/i,
+    /\.m4b\b/i,
     /\bunabridged\b/i,
     /\babridged\b/i,
     /\bnarrated\s+by\b/i,
     /\bread\s+by\b/i,
-    /\b(?:64|128|192|256|320)kbps\b/i,
-    /\bmp3\b.*\b(?:audiobook|book)\b/i
+    /\bnarrator\b/i,
+    /\b(?:64|128|192|256|320)\s*kbps\b/i,
+    /\bmp3\b.*\b(?:audiobook|book)\b/i,
+    /\baudio\s*book\b/i,
+    /\bchaptered\b/i,
+    /\bvoice\b/i
+  ].freeze
+
+  # Ebook-only format indicators (negative signal for audiobook search)
+  EBOOK_PATTERNS = [
+    /\bepub\b/i,
+    /\.epub\b/i,
+    /\bmobi\b/i,
+    /\.mobi\b/i,
+    /\bpdf\b/i,
+    /\.pdf\b/i,
+    /\bazw3?\b/i,
+    /\bcbr\b/i,
+    /\bcbz\b/i
   ].freeze
 
   class << self
@@ -256,15 +274,20 @@ class ReleaseParserService
       MULTI_LANGUAGE_PATTERNS.any? { |pattern| title.match?(pattern) }
     end
 
-    # Detect if the format is audiobook from the title
+    # Detect if the format is audiobook or ebook from the title
     # @param title [String] The release title
-    # @return [Symbol, nil] :audiobook or nil if unknown
+    # @return [Symbol, nil] :audiobook, :ebook, or nil if unknown
     def detect_format(title)
       return nil if title.blank?
 
-      return :audiobook if AUDIOBOOK_PATTERNS.any? { |pattern| title.match?(pattern) }
+      is_audiobook = AUDIOBOOK_PATTERNS.any? { |p| title.match?(p) }
+      is_ebook = EBOOK_PATTERNS.any? { |p| title.match?(p) }
 
-      nil
+      if is_audiobook
+        :audiobook
+      elsif is_ebook
+        :ebook
+      end
     end
 
     # Get display info for a language code

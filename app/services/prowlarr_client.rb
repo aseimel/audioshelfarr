@@ -30,7 +30,7 @@ class ProwlarrClient
   end
 
   # Newznab/Prowlarr category ID for audiobooks
-  AUDIOBOOK_CATEGORIES = [3030].freeze  # Audio/Audiobook
+  AUDIOBOOK_CATEGORIES = [3030, 7020].freeze  # Audio/Audiobook + Books/Ebook (audiobooks often miscategorized)
 
   class << self
     # Search for audiobooks via Prowlarr indexers

@@ -43,6 +43,7 @@ Rails.application.routes.draw do
   end
 
   # Requests
+  post 'requests/quick', to: 'requests#quick_create', as: :quick_request
   resources :requests, only: [ :index, :show, :new, :create, :destroy ] do
     member do
       get :download

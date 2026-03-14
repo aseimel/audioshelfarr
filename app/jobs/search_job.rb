@@ -3,7 +3,9 @@
 class SearchJob < ApplicationJob
   queue_as :default
 
-  def perform(request_id)
+  def perform(request_id, force_auto_select: false)
+    @force_auto_select = force_auto_select
+
     request = Request.find_by(id: request_id)
     return unless request
     return unless request.pending?
@@ -48,18 +50,62 @@ class SearchJob < ApplicationJob
 
   def search_prowlarr(request)
     book = request.book
+    language_term = should_add_language_to_search?(request) ? language_search_term(request) : nil
 
-    # Build search query: "title author [language]"
-    query_parts = [ book.title ]
-    query_parts << book.author if book.author.present?
-    # Add language to query for non-English requests to help find localized releases
-    query_parts << language_search_term(request) if should_add_language_to_search?(request)
+    # Try multiple query variations (stop on first results found)
+    queries = build_query_variations(book, language_term)
 
-    query = query_parts.join(" ")
-    Rails.logger.debug "[SearchJob] Searching Prowlarr for: #{query}"
+    queries.each do |query|
+      Rails.logger.info "[SearchJob] Trying query: #{query}"
+      results = ProwlarrClient.search(query)
+      if results.any?
+        Rails.logger.info "[SearchJob] Found #{results.count} results with query: #{query}"
+        return results
+      end
+    end
 
-    # Search with audiobook category filter
-    ProwlarrClient.search(query)
+    [] # No results from any query
+  end
+
+  def build_query_variations(book, language_term)
+    title = book.title
+    author = book.author
+    short_title = strip_subtitle(title)
+
+    queries = []
+
+    # Variation 1: author + title (most specific)
+    if author.present?
+      base = "#{author} #{title}"
+      queries << (language_term ? "#{base} #{language_term}" : base)
+    end
+
+    # Variation 2: title + author (reversed)
+    if author.present?
+      base = "#{title} #{author}"
+      queries << (language_term ? "#{base} #{language_term}" : base)
+    end
+
+    # Variation 3: title only (broader)
+    queries << (language_term ? "#{title} #{language_term}" : title)
+
+    # Variation 4: short title + author (stripped subtitle)
+    if short_title != title && author.present?
+      base = "#{short_title} #{author}"
+      queries << (language_term ? "#{base} #{language_term}" : base)
+    end
+
+    # Variation 5: short title only
+    if short_title != title
+      queries << (language_term ? "#{short_title} #{language_term}" : short_title)
+    end
+
+    queries.uniq
+  end
+
+  def strip_subtitle(title)
+    # Strip subtitle after colon or opening paren, like Readarr does
+    title.split(/[:(\[]/, 2).first.strip
   end
 
   def save_results(request, results)
@@ -85,7 +131,7 @@ class SearchJob < ApplicationJob
   end
 
   def attempt_auto_select(request)
-    unless SettingsService.get(:auto_select_enabled, default: false)
+    unless @force_auto_select || SettingsService.get(:auto_select_enabled, default: true)
       # Auto-select disabled, flag for manual selection
       request.mark_for_attention!("Search results found. Please review and select a result to download.")
       Rails.logger.info "[SearchJob] Auto-select disabled, flagged for manual selection for request ##{request.id}"

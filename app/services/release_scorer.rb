@@ -5,9 +5,10 @@
 class ReleaseScorer
   # Weight configuration for each scoring factor
   WEIGHTS = {
-    title: 45,      # How well does the release title match the book title?
-    author: 25,     # Is the author name present in the release title?
+    title: 40,      # How well does the release title match the book title?
+    author: 20,     # Is the author name present in the release title?
     language: 25,   # Does it match the requested language?
+    format: 10,     # Does it match the expected format (audiobook vs ebook)?
     health: 5       # Seeders/availability (for torrents)
   }.freeze
 
@@ -39,6 +40,7 @@ class ReleaseScorer
       title: calculate_title_score,
       author: calculate_author_score,
       language: calculate_language_score,
+      format: calculate_format_score,
       health: calculate_health_score
     }
 
@@ -148,6 +150,19 @@ class ReleaseScorer
       60 + ((seeders - 5) * 1.3).round
     else
       [ 80 + ((seeders - 20) * 0.2).round, 100 ].min
+    end
+  end
+
+  # Format matching score (0-100)
+  # Boosts audiobook releases, penalizes ebook-only releases
+  def calculate_format_score
+    case @parsed[:format]
+    when :audiobook
+      100  # Strong positive signal
+    when :ebook
+      0    # Strong negative signal - this is an ebook, not an audiobook
+    else
+      50   # Neutral - no format indicators detected
     end
   end
 

@@ -94,6 +94,49 @@ class RequestsController < ApplicationController
     end
   end
 
+  def quick_create
+    work_id = params[:work_id]
+
+    if work_id.blank?
+      redirect_to search_path, alert: "Missing required information"
+      return
+    end
+
+    # Check for duplicates
+    duplicate_check = DuplicateDetectionService.check(work_id: work_id)
+    if duplicate_check.block?
+      redirect_to search_path, alert: duplicate_check.message
+      return
+    end
+
+    # Find or create the book
+    book = find_or_create_book_for_source(work_id)
+
+    # Create request
+    request = Current.user.requests.build(book: book, status: :pending)
+    request.language = params[:language].presence || SettingsService.get(:default_language)
+
+    unless request.save
+      redirect_to search_path, alert: request.errors.full_messages.join(', ')
+      return
+    end
+
+    ActivityTracker.track("request.created", trackable: request)
+
+    # Immediately search and auto-select
+    SearchJob.perform_now(request.id, force_auto_select: true)
+    request.reload
+
+    case request.status
+    when "downloading"
+      redirect_to request, notice: "Found and downloading #{book.display_name}"
+    when "searching"
+      redirect_to request, notice: "Searching for #{book.display_name}..."
+    else
+      redirect_to request, notice: "Request created for #{book.display_name}"
+    end
+  end
+
   def destroy
     unless @request.user == Current.user || Current.user.admin?
       redirect_to requests_path, alert: "You cannot cancel this request"
