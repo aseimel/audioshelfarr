@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_21_000002) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_27_100159) do
   create_table "activity_logs", force: :cascade do |t|
     t.string "action", null: false
     t.string "controller"
@@ -30,7 +30,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_21_000002) do
 
   create_table "books", force: :cascade do |t|
     t.string "author"
-    t.integer "book_type", default: 0, null: false
     t.string "cover_url"
     t.datetime "created_at", null: false
     t.text "description"
@@ -47,7 +46,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_21_000002) do
     t.string "title", null: false
     t.datetime "updated_at", null: false
     t.integer "year"
-    t.index ["book_type"], name: "index_books_on_book_type"
     t.index ["hardcover_id"], name: "index_books_on_hardcover_id"
     t.index ["isbn"], name: "index_books_on_isbn"
     t.index ["open_library_edition_id"], name: "index_books_on_open_library_edition_id"
@@ -200,7 +198,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_21_000002) do
 
   create_table "uploads", force: :cascade do |t|
     t.integer "book_id"
-    t.integer "book_type"
     t.string "content_type"
     t.datetime "created_at", null: false
     t.text "error_message"
@@ -215,7 +212,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_21_000002) do
     t.datetime "updated_at", null: false
     t.integer "user_id", null: false
     t.index ["book_id"], name: "index_uploads_on_book_id"
-    t.index ["book_type"], name: "index_uploads_on_book_type"
     t.index ["processed_at"], name: "index_uploads_on_processed_at"
     t.index ["status"], name: "index_uploads_on_status"
     t.index ["user_id"], name: "index_uploads_on_user_id"
