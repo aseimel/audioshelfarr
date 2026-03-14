@@ -86,12 +86,12 @@ class ReleaseParserServiceTest < ActiveSupport::TestCase
     assert_equal :audiobook, ReleaseParserService.detect_format("Book Title Unabridged")
   end
 
-  test "detect_format returns nil for EPUB" do
-    assert_nil ReleaseParserService.detect_format("Book.Title.EPUB")
+  test "detect_format returns ebook for EPUB" do
+    assert_equal :ebook, ReleaseParserService.detect_format("Book.Title.EPUB")
   end
 
-  test "detect_format returns nil for MOBI" do
-    assert_nil ReleaseParserService.detect_format("Book.Title.MOBI")
+  test "detect_format returns ebook for MOBI" do
+    assert_equal :ebook, ReleaseParserService.detect_format("Book.Title.MOBI")
   end
 
   test "detect_format returns nil for unknown format" do

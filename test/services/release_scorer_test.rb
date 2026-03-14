@@ -83,7 +83,7 @@ class ReleaseScorerTest < ActiveSupport::TestCase
     assert_equal :audiobook, result.detected_format
   end
 
-  test "detects nil format for ebook release title" do
+  test "detects ebook format for ebook release title" do
     search_result = @request.search_results.create!(
       guid: "test-6",
       title: "The Name of the Wind EPUB",
@@ -92,7 +92,7 @@ class ReleaseScorerTest < ActiveSupport::TestCase
 
     result = ReleaseScorer.score(search_result, @request)
 
-    assert_nil result.detected_format
+    assert_equal :ebook, result.detected_format
   end
 
   test "scores author presence correctly" do
