@@ -6,11 +6,9 @@ class PostProcessingJobTest < ActiveJob::TestCase
   setup do
     AudiobookshelfClient.reset_connection!
 
-    # Create an audiobook for testing (not ebook)
     @book = Book.create!(
       title: "Test Audiobook",
-      author: "Test Author",
-      book_type: :audiobook
+      author: "Test Author"
     )
 
     # Create a request for the audiobook

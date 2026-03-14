@@ -7,7 +7,6 @@ class AudiobookshelfLibrarySyncJobTest < ActiveJob::TestCase
     SettingsService.set(:audiobookshelf_url, "http://localhost:13378")
     SettingsService.set(:audiobookshelf_api_key, "test-api-key")
     SettingsService.set(:audiobookshelf_audiobook_library_id, "lib-audio")
-    SettingsService.set(:audiobookshelf_ebook_library_id, "")
     SettingsService.set(:audiobookshelf_library_sync_interval, 3600)
   end
 
@@ -48,7 +47,6 @@ class AudiobookshelfLibrarySyncJobTest < ActiveJob::TestCase
     SettingsService.set(:audiobookshelf_url, "")
     SettingsService.set(:audiobookshelf_api_key, "")
     SettingsService.set(:audiobookshelf_audiobook_library_id, "")
-    SettingsService.set(:audiobookshelf_ebook_library_id, "")
     SettingsService.set(:audiobookshelf_library_sync_interval, 0)
 
     assert_no_enqueued_jobs do

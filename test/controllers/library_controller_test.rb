@@ -29,19 +29,6 @@ class LibraryControllerTest < ActionDispatch::IntegrationTest
     assert_select "a[href='#{library_path(@acquired_audiobook)}']"
   end
 
-  test "index filters by ebook type" do
-    ebook = Book.create!(
-      title: "Acquired Ebook",
-      author: "Test Author",
-      book_type: :ebook,
-      file_path: "/ebooks/Test Author/Acquired Ebook"
-    )
-
-    get library_index_path(type: "ebook")
-    assert_response :success
-    assert_select "a[href='#{library_path(ebook)}']"
-  end
-
   test "index shows empty state when no books" do
     Book.where.not(file_path: nil).update_all(file_path: nil)
 
@@ -57,7 +44,7 @@ class LibraryControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "show returns 404 for non-acquired book" do
-    pending_book = books(:ebook_pending)
+    pending_book = books(:audiobook_pending)
 
     get library_path(pending_book)
     assert_response :not_found

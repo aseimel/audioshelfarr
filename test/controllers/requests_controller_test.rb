@@ -56,12 +56,10 @@ class RequestsControllerTest < ActionDispatch::IntegrationTest
     # Create unique books for this test
     active_book = Book.create!(
       title: "Active Test Book Unique",
-      book_type: :ebook,
       open_library_work_id: "OL_ACTIVE_FILTER_TEST"
     )
     attention_book = Book.create!(
       title: "Attention Test Book Unique",
-      book_type: :ebook,
       open_library_work_id: "OL_ATTENTION_FILTER_TEST"
     )
 
@@ -168,14 +166,12 @@ class RequestsControllerTest < ActionDispatch::IntegrationTest
       post requests_path, params: {
         work_id: "OL_NEW_123W",
         title: "New Book",
-        author: "New Author",
-        book_type: "audiobook"
+        author: "New Author"
       }
     end
 
     book = Book.last
     assert_equal "New Book", book.title
-    assert_equal "audiobook", book.book_type
     assert_equal @user, book.requests.last.user
     assert_redirected_to request_path(Request.last)
   end
@@ -183,7 +179,6 @@ class RequestsControllerTest < ActionDispatch::IntegrationTest
   test "create reuses existing book" do
     existing_book = Book.create!(
       title: "Existing",
-      book_type: :ebook,
       open_library_work_id: "OL_EXISTING_W"
     )
 
@@ -191,8 +186,7 @@ class RequestsControllerTest < ActionDispatch::IntegrationTest
       assert_difference "Request.count", 1 do
         post requests_path, params: {
           work_id: "OL_EXISTING_W",
-          title: "Existing",
-          book_type: "ebook"
+          title: "Existing"
         }
       end
     end
@@ -201,7 +195,6 @@ class RequestsControllerTest < ActionDispatch::IntegrationTest
   test "create blocks duplicate for acquired book" do
     book = Book.create!(
       title: "Acquired",
-      book_type: :audiobook,
       open_library_work_id: "OL_ACQUIRED_W",
       file_path: "/audiobooks/Author/Acquired"
     )
@@ -209,8 +202,7 @@ class RequestsControllerTest < ActionDispatch::IntegrationTest
     assert_no_difference [ "Book.count", "Request.count" ] do
       post requests_path, params: {
         work_id: "OL_ACQUIRED_W",
-        title: "Acquired",
-        book_type: "audiobook"
+        title: "Acquired"
       }
     end
 
@@ -236,7 +228,6 @@ class RequestsControllerTest < ActionDispatch::IntegrationTest
   test "destroy cleans up orphaned book without requests" do
     book = Book.create!(
       title: "Orphan Book",
-      book_type: :ebook,
       open_library_work_id: "OL_ORPHAN_W"
     )
     request = Request.create!(book: book, user: @user, status: :pending)
@@ -272,7 +263,7 @@ class RequestsControllerTest < ActionDispatch::IntegrationTest
   test "user cannot cancel another user's request" do
     other_user = users(:two)
     other_request = Request.create!(
-      book: books(:ebook_pending),
+      book: books(:audiobook_pending),
       user: other_user,
       status: :pending
     )
@@ -354,7 +345,6 @@ class RequestsControllerTest < ActionDispatch::IntegrationTest
     book = Book.create!(
       title: "Test Download",
       author: "Test Author",
-      book_type: :audiobook,
       file_path: temp_file
     )
     request = Request.create!(book: book, user: @user, status: :completed)
@@ -381,7 +371,6 @@ class RequestsControllerTest < ActionDispatch::IntegrationTest
     book = Book.create!(
       title: "Test Book",
       author: "Test Author",
-      book_type: :audiobook,
       file_path: book_dir
     )
     request = Request.create!(book: book, user: @user, status: :completed)
@@ -406,7 +395,6 @@ class RequestsControllerTest < ActionDispatch::IntegrationTest
     book = Book.create!(
       title: "Other User Book",
       author: "Author",
-      book_type: :audiobook,
       file_path: temp_file
     )
     other_request = Request.create!(book: book, user: @admin, status: :completed)
@@ -432,7 +420,6 @@ class RequestsControllerTest < ActionDispatch::IntegrationTest
     book = Book.create!(
       title: "User Book",
       author: "Author",
-      book_type: :audiobook,
       file_path: temp_file
     )
     user_request = Request.create!(book: book, user: @user, status: :completed)

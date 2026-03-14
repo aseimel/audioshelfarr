@@ -8,7 +8,6 @@ class AudiobookshelfLibrarySyncServiceTest < ActiveSupport::TestCase
     SettingsService.set(:audiobookshelf_url, "http://localhost:13378")
     SettingsService.set(:audiobookshelf_api_key, "test-api-key")
     SettingsService.set(:audiobookshelf_audiobook_library_id, "lib-audio")
-    SettingsService.set(:audiobookshelf_ebook_library_id, "lib-ebook")
   end
 
   test "syncs items from configured libraries and removes stale entries" do
@@ -32,36 +31,18 @@ class AudiobookshelfLibrarySyncServiceTest < ActiveSupport::TestCase
           }.to_json
         )
 
-      stub_request(:get, %r{localhost:13378/api/libraries/lib-ebook/items})
-        .with(query: hash_including("limit" => "500", "page" => "1"))
-        .to_return(
-          status: 200,
-          headers: { "Content-Type" => "application/json" },
-          body: {
-            "results" => [
-              {
-                "id" => "ab-2",
-                "title" => "Good Omens",
-                "author" => "Neil Gaiman"
-              }
-            ],
-            "total" => 1
-          }.to_json
-        )
-
       result = AudiobookshelfLibrarySyncService.new.sync!
       assert result.success?
-      assert_equal 2, result.items_synced
-      assert_equal 2, result.libraries_synced
+      assert_equal 1, result.items_synced
+      assert_equal 1, result.libraries_synced
       assert_empty result.errors
-      assert_equal 2, LibraryItem.count
+      assert_equal 1, LibraryItem.count
       assert_not LibraryItem.exists?(audiobookshelf_id: "ab-stale")
     end
   end
 
   test "returns false when no configurable libraries are available" do
     SettingsService.set(:audiobookshelf_audiobook_library_id, "")
-    SettingsService.set(:audiobookshelf_ebook_library_id, "")
     SettingsService.set(:audiobookshelf_url, "http://localhost:13378")
     SettingsService.set(:audiobookshelf_api_key, "test-api-key")
 

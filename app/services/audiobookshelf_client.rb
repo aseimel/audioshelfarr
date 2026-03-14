@@ -76,11 +76,10 @@ class AudiobookshelfClient
       # Normalize path for comparison
       normalized_path = File.expand_path(path)
 
-      # Search all configured libraries
+      # Search configured library
       library_ids = [
-        SettingsService.get(:audiobookshelf_audiobook_library_id),
-        SettingsService.get(:audiobookshelf_ebook_library_id)
-      ].compact.uniq
+        SettingsService.get(:audiobookshelf_audiobook_library_id)
+      ].compact
 
       library_ids.each do |lib_id|
         next if lib_id.blank?

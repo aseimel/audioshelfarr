@@ -31,9 +31,6 @@
                 </div>
                 <div class="text-sm text-gray-500">
                   <%= number_to_human_size(upload.file_size) if upload.file_size %>
-                  <% if upload.book_type.present? %>
-                    - <%= upload.book_type.humanize %>
-                  <% end %>
                 </div>
               </td>
               <td class="px-6 py-4">

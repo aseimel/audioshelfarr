@@ -6,8 +6,7 @@ class ReleaseScorerTest < ActiveSupport::TestCase
   setup do
     @book = Book.create!(
       title: "The Name of the Wind",
-      author: "Patrick Rothfuss",
-      book_type: :audiobook
+      author: "Patrick Rothfuss"
     )
 
     @user = users(:one)
@@ -82,10 +81,9 @@ class ReleaseScorerTest < ActiveSupport::TestCase
     result = ReleaseScorer.score(search_result, @request)
 
     assert_equal :audiobook, result.detected_format
-    assert result.breakdown[:format] == 100
   end
 
-  test "scores format mismatch for ebook when audiobook requested" do
+  test "detects nil format for ebook release title" do
     search_result = @request.search_results.create!(
       guid: "test-6",
       title: "The Name of the Wind EPUB",
@@ -94,8 +92,7 @@ class ReleaseScorerTest < ActiveSupport::TestCase
 
     result = ReleaseScorer.score(search_result, @request)
 
-    assert_equal :ebook, result.detected_format
-    assert result.breakdown[:format] == 0
+    assert_nil result.detected_format
   end
 
   test "scores author presence correctly" do

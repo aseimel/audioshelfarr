@@ -6,7 +6,7 @@ class AutoSelectServiceTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
   setup do
-    @book = books(:ebook_pending)
+    @book = books(:audiobook_pending)
     @user = users(:one)
     @request = Request.create!(
       book: @book,

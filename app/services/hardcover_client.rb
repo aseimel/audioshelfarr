@@ -16,7 +16,7 @@ class HardcoverClient
   # Data structures for API responses
   SearchResult = Data.define(
     :id, :title, :author, :description, :release_year,
-    :cover_url, :has_audiobook, :has_ebook
+    :cover_url, :has_audiobook
   ) do
     def work_id
       "hardcover:#{id}"
@@ -34,7 +34,7 @@ class HardcoverClient
 
   BookDetails = Data.define(
     :id, :title, :author, :description, :release_year,
-    :cover_url, :has_audiobook, :has_ebook, :pages, :genres, :series_name
+    :cover_url, :has_audiobook, :pages, :genres, :series_name
   ) do
     def work_id
       "hardcover:#{id}"
@@ -216,8 +216,7 @@ class HardcoverClient
         description: doc["description"],
         release_year: doc["release_year"],
         cover_url: extract_cover_url(doc),
-        has_audiobook: doc["has_audiobook"] || false,
-        has_ebook: doc["has_ebook"] || false
+        has_audiobook: doc["has_audiobook"] || false
       )
     end
 
@@ -243,7 +242,6 @@ class HardcoverClient
         release_year: book["release_year"],
         cover_url: extract_cover_url(book),
         has_audiobook: false, # Not available in this query
-        has_ebook: false,     # Not available in this query
         pages: pages,
         genres: [],           # Would need separate query
         series_name: series_name

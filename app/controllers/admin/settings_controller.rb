@@ -47,14 +47,11 @@ module Admin
         ProwlarrClient.reset_connection!
         run_service_health_check("prowlarr")
       end
-      if changed_keys.any? { |k| k == "flaresolverr_url" }
-        FlaresolverrClient.reset_connection!
-      end
       if changed_keys.any? { |k| k.start_with?("hardcover") }
         HardcoverClient.reset_connection!
         run_service_health_check("hardcover")
       end
-      if changed_keys.any? { |k| k.start_with?("audiobook_output_path") || k.start_with?("ebook_output_path") }
+      if changed_keys.any? { |k| k.start_with?("audiobook_output_path") }
         run_service_health_check_now("output_paths")
       end
 
@@ -152,22 +149,6 @@ module Admin
       redirect_to admin_settings_path, notice: "Audiobookshelf library sync started."
     end
 
-    # FlareSolverr is not tracked in SystemHealth::SERVICES, so no SystemHealth sync here
-    def test_flaresolverr
-      unless FlaresolverrClient.configured?
-        respond_with_flash(alert: "FlareSolverr URL is not configured.")
-        return
-      end
-
-      if FlaresolverrClient.test_connection
-        respond_with_flash(notice: "FlareSolverr connection successful!")
-      else
-        respond_with_flash(alert: "FlareSolverr connection failed.")
-      end
-    rescue FlaresolverrClient::Error => e
-      respond_with_flash(alert: "FlareSolverr error: #{e.message}")
-    end
-
     def test_hardcover
       health = SystemHealth.for_service("hardcover")
 
@@ -248,7 +229,7 @@ module Admin
       Rails.logger.warn "[SettingsController] Failed to run health check for #{service_name}: #{e.message}"
     end
 
-    PATH_TEMPLATE_SETTINGS = %w[audiobook_path_template ebook_path_template].freeze
+    PATH_TEMPLATE_SETTINGS = %w[audiobook_path_template].freeze
 
     def validate_path_template!(key, value)
       error = validate_path_template(key, value)

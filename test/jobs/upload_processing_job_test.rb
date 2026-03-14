@@ -8,15 +8,9 @@ class UploadProcessingJobTest < ActiveJob::TestCase
 
     @temp_source = Dir.mktmpdir("source")
     @temp_audiobook_dest = Dir.mktmpdir("audiobooks")
-    @temp_ebook_dest = Dir.mktmpdir("ebooks")
 
     Setting.find_or_create_by(key: "audiobook_output_path").update!(
       value: @temp_audiobook_dest,
-      value_type: "string",
-      category: "paths"
-    )
-    Setting.find_or_create_by(key: "ebook_output_path").update!(
-      value: @temp_ebook_dest,
       value_type: "string",
       category: "paths"
     )
@@ -39,7 +33,6 @@ class UploadProcessingJobTest < ActiveJob::TestCase
   teardown do
     FileUtils.rm_rf(@temp_source) if @temp_source
     FileUtils.rm_rf(@temp_audiobook_dest) if @temp_audiobook_dest
-    FileUtils.rm_rf(@temp_ebook_dest) if @temp_ebook_dest
   end
 
   test "processes upload and creates book" do
@@ -54,7 +47,6 @@ class UploadProcessingJobTest < ActiveJob::TestCase
       assert @upload.completed?
       assert_equal "Mistborn", @upload.parsed_title
       assert_equal "Brandon Sanderson", @upload.parsed_author
-      assert @upload.audiobook?
       assert @upload.book.present?
     end
   end
@@ -73,41 +65,13 @@ class UploadProcessingJobTest < ActiveJob::TestCase
     end
   end
 
-  test "handles ebook uploads" do
-    VCR.turned_off do
-      stub_open_library_search("Dune Frank Herbert")
-
-      ebook_file = File.join(@temp_source, "Frank Herbert - Dune.epub")
-      File.write(ebook_file, "test ebook content")
-
-      upload = Upload.create!(
-        user: @user,
-        original_filename: "Frank Herbert - Dune.epub",
-        file_path: ebook_file,
-        file_size: 100,
-        status: :pending
-      )
-
-      UploadProcessingJob.perform_now(upload.id)
-      upload.reload
-
-      assert upload.completed?
-      assert upload.ebook?
-      assert upload.book.ebook?
-
-      expected_path = File.join(@temp_ebook_dest, "Frank Herbert", "Dune")
-      assert_equal expected_path, upload.book.file_path
-    end
-  end
-
   test "matches existing book instead of creating new" do
     VCR.turned_off do
       stub_open_library_search("Mistborn Brandon Sanderson")
 
       existing = Book.create!(
         title: "Mistborn",
-        author: "Brandon Sanderson",
-        book_type: :audiobook
+        author: "Brandon Sanderson"
       )
 
       assert_no_difference "Book.count" do

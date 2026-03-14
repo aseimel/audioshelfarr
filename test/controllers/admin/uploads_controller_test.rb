@@ -39,16 +39,6 @@ class Admin::UploadsControllerTest < ActionDispatch::IntegrationTest
     assert_equal "File uploaded successfully. Processing started.", flash[:notice]
   end
 
-  test "create with ebook file starts processing" do
-    file = fixture_file_upload("test_ebook.epub", "application/epub+zip")
-
-    assert_difference "Upload.count", 1 do
-      post admin_uploads_url, params: { file: file }
-    end
-
-    assert_redirected_to admin_uploads_path
-  end
-
   test "create rejects unsupported file types" do
     file = fixture_file_upload("test.txt", "text/plain")
 

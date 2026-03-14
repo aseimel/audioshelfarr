@@ -33,7 +33,7 @@ class MetadataServiceTest < ActiveSupport::TestCase
     VCR.turned_off do
       stub_hardcover_search([
         { "id" => 456, "title" => "Harry Potter", "author_names" => [ "J.K. Rowling" ],
-          "release_year" => 1997, "cached_image" => nil, "has_audiobook" => true, "has_ebook" => true }
+          "release_year" => 1997, "cached_image" => nil, "has_audiobook" => true }
       ])
 
       results = MetadataService.search("harry potter")
@@ -121,7 +121,6 @@ class MetadataServiceTest < ActiveSupport::TestCase
       year: 2020,
       cover_url: "https://example.com/cover.jpg",
       has_audiobook: true,
-      has_ebook: true,
       series_name: "Test Series"
     )
 

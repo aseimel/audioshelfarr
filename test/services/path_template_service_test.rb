@@ -84,13 +84,6 @@ class PathTemplateServiceTest < ActiveSupport::TestCase
     assert_equal "{year}/{author}", template
   end
 
-  test "template_for returns ebook template for ebooks" do
-    ebook = books(:ebook_pending)
-    Setting.create!(key: "ebook_path_template", value: "{author}", value_type: "string", category: "paths")
-
-    template = PathTemplateService.template_for(ebook)
-    assert_equal "{author}", template
-  end
 
   test "build_destination combines base path and template" do
     result = PathTemplateService.build_destination(@book, base_path: "/audiobooks")
@@ -269,11 +262,4 @@ class PathTemplateServiceTest < ActiveSupport::TestCase
     assert_equal "{title}", template
   end
 
-  test "filename_template_for returns ebook template for ebooks" do
-    ebook = books(:ebook_pending)
-    Setting.create!(key: "ebook_filename_template", value: "{title} - {author}", value_type: "string", category: "paths")
-
-    template = PathTemplateService.filename_template_for(ebook)
-    assert_equal "{title} - {author}", template
-  end
 end

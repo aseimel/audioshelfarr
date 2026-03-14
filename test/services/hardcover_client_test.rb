@@ -38,7 +38,7 @@ class HardcoverClientTest < ActiveSupport::TestCase
       stub_hardcover_search("lord of the rings", [
         { "id" => 123, "title" => "The Lord of the Rings", "author_names" => [ "J.R.R. Tolkien" ],
           "release_year" => 1954, "cached_image" => "https://example.com/cover.jpg",
-          "has_audiobook" => true, "has_ebook" => true }
+          "has_audiobook" => true }
       ])
 
       results = HardcoverClient.search("lord of the rings")
@@ -52,7 +52,6 @@ class HardcoverClientTest < ActiveSupport::TestCase
       assert_equal "J.R.R. Tolkien", result.author
       assert_equal 1954, result.release_year
       assert result.has_audiobook
-      assert result.has_ebook
     end
   end
 
@@ -96,8 +95,7 @@ class HardcoverClientTest < ActiveSupport::TestCase
           "release_year" => 1965,
           "cached_image" => nil,
           "image" => { "url" => "https://example.com/image-cover.jpg" },
-          "has_audiobook" => true,
-          "has_ebook" => true
+          "has_audiobook" => true
         }
       ])
 
@@ -227,8 +225,7 @@ class HardcoverClientTest < ActiveSupport::TestCase
       description: nil,
       release_year: 2020,
       cover_url: nil,
-      has_audiobook: true,
-      has_ebook: true
+      has_audiobook: true
     )
 
     assert_equal "hardcover:12345", result.work_id

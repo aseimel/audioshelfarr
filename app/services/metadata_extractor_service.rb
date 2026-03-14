@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Extracts metadata from uploaded files (audiobooks and ebooks)
+# Extracts metadata from uploaded audiobook files
 # Reads embedded metadata like ID3 tags, EPUB OPF, PDF info, etc.
 class MetadataExtractorService
   # Result of metadata extraction

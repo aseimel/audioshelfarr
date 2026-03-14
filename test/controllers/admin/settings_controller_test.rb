@@ -8,13 +8,11 @@ class Admin::SettingsControllerTest < ActionDispatch::IntegrationTest
     sign_in_as(@admin)
     AudiobookshelfClient.reset_connection!
     ProwlarrClient.reset_connection!
-    FlaresolverrClient.reset_connection!
   end
 
   teardown do
     AudiobookshelfClient.reset_connection!
     ProwlarrClient.reset_connection!
-    FlaresolverrClient.reset_connection!
   end
 
   test "index requires admin" do
@@ -118,37 +116,17 @@ class Admin::SettingsControllerTest < ActionDispatch::IntegrationTest
 
   test "bulk_update immediately updates output_paths health when paths are valid" do
     Dir.mktmpdir do |audiobook_dir|
-      Dir.mktmpdir do |ebook_dir|
-        patch bulk_update_admin_settings_url, params: {
-          settings: {
-            audiobook_output_path: audiobook_dir,
-            ebook_output_path: ebook_dir
-          }
-        }
-
-        assert_redirected_to admin_settings_path
-
-        health = SystemHealth.for_service("output_paths")
-        assert health.healthy?
-        assert_includes health.message, "accessible"
-      end
-    end
-  end
-
-  test "bulk_update immediately updates output_paths health with failure reason" do
-    Dir.mktmpdir do |audiobook_dir|
       patch bulk_update_admin_settings_url, params: {
         settings: {
-          audiobook_output_path: audiobook_dir,
-          ebook_output_path: "/definitely/missing/path"
+          audiobook_output_path: audiobook_dir
         }
       }
 
       assert_redirected_to admin_settings_path
 
       health = SystemHealth.for_service("output_paths")
-      assert health.degraded?
-      assert_includes health.message, "Ebook path does not exist"
+      assert health.healthy?
+      assert_includes health.message, "accessible"
     end
   end
 
@@ -521,118 +499,4 @@ class Admin::SettingsControllerTest < ActionDispatch::IntegrationTest
     assert_nil new_connection, "Connection should be reset after prowlarr settings change"
   end
 
-  # Test connection tests for FlareSolverr
-  test "test_flaresolverr fails when not configured" do
-    SettingsService.set(:flaresolverr_url, "")
-
-    post test_flaresolverr_admin_settings_url
-
-    assert_redirected_to admin_settings_path
-    assert_match /not configured/i, flash[:alert]
-  end
-
-  test "test_flaresolverr succeeds when connection works" do
-    SettingsService.set(:flaresolverr_url, "http://localhost:8191")
-
-    VCR.turned_off do
-      stub_request(:post, "http://localhost:8191/v1")
-        .to_return(
-          status: 200,
-          body: {
-            status: "ok",
-            message: "",
-            solution: { status: 200, response: "<html></html>" }
-          }.to_json
-        )
-
-      post test_flaresolverr_admin_settings_url
-
-      assert_redirected_to admin_settings_path
-      assert_match /successful/i, flash[:notice]
-    end
-
-    FlaresolverrClient.reset_connection!
-    SettingsService.set(:flaresolverr_url, "")
-  end
-
-  test "test_flaresolverr fails when connection fails" do
-    SettingsService.set(:flaresolverr_url, "http://localhost:8191")
-
-    VCR.turned_off do
-      stub_request(:post, "http://localhost:8191/v1")
-        .to_return(
-          status: 200,
-          body: { status: "error", message: "Challenge failed" }.to_json
-        )
-
-      post test_flaresolverr_admin_settings_url
-
-      assert_redirected_to admin_settings_path
-      assert flash[:alert].present?
-    end
-
-    FlaresolverrClient.reset_connection!
-    SettingsService.set(:flaresolverr_url, "")
-  end
-
-  test "test_flaresolverr handles connection errors" do
-    SettingsService.set(:flaresolverr_url, "http://localhost:8191")
-
-    VCR.turned_off do
-      stub_request(:post, "http://localhost:8191/v1")
-        .to_raise(Faraday::ConnectionFailed.new("Connection refused"))
-
-      post test_flaresolverr_admin_settings_url
-
-      assert_redirected_to admin_settings_path
-      assert flash[:alert].present?
-    end
-
-    FlaresolverrClient.reset_connection!
-    SettingsService.set(:flaresolverr_url, "")
-  end
-
-  test "test_flaresolverr returns turbo stream when requested" do
-    SettingsService.set(:flaresolverr_url, "http://localhost:8191")
-
-    VCR.turned_off do
-      stub_request(:post, "http://localhost:8191/v1")
-        .to_return(
-          status: 200,
-          body: {
-            status: "ok",
-            message: "",
-            solution: { status: 200, response: "<html></html>" }
-          }.to_json
-        )
-
-      post test_flaresolverr_admin_settings_url,
-        headers: { "Accept" => "text/vnd.turbo-stream.html" }
-
-      assert_response :success
-      assert_match "turbo-stream", response.body
-    end
-
-    FlaresolverrClient.reset_connection!
-    SettingsService.set(:flaresolverr_url, "")
-  end
-
-  test "bulk_update resets flaresolverr connection when url changes" do
-    SettingsService.set(:flaresolverr_url, "http://old.example.com:8191")
-
-    # Prime the connection with old url
-    FlaresolverrClient.send(:connection)
-    old_connection = FlaresolverrClient.instance_variable_get(:@connection)
-    assert_not_nil old_connection
-
-    patch bulk_update_admin_settings_url, params: {
-      settings: { flaresolverr_url: "http://new.example.com:8191" }
-    }
-
-    # Connection should be reset
-    new_connection = FlaresolverrClient.instance_variable_get(:@connection)
-    assert_nil new_connection, "Connection should be reset after flaresolverr settings change"
-
-    SettingsService.set(:flaresolverr_url, "")
-  end
 end

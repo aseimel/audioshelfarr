@@ -36,8 +36,8 @@ class RequestQueueJobTest < ActiveJob::TestCase
     Request.pending.destroy_all
 
     # Create pending requests with specific order
-    older_book = Book.create!(title: "Older", book_type: :ebook, open_library_work_id: "OL_OLDER")
-    newer_book = Book.create!(title: "Newer", book_type: :ebook, open_library_work_id: "OL_NEWER")
+    older_book = Book.create!(title: "Older", open_library_work_id: "OL_OLDER")
+    newer_book = Book.create!(title: "Newer", open_library_work_id: "OL_NEWER")
 
     older_request = Request.create!(book: older_book, user: users(:one), status: :pending, created_at: 2.hours.ago)
     newer_request = Request.create!(book: newer_book, user: users(:one), status: :pending, created_at: 1.hour.ago)
@@ -55,7 +55,7 @@ class RequestQueueJobTest < ActiveJob::TestCase
 
     # Create more pending requests than the batch size
     (batch_size + 2).times do |i|
-      book = Book.create!(title: "Batch Test #{i}", book_type: :ebook, open_library_work_id: "OL_BATCH_#{i}")
+      book = Book.create!(title: "Batch Test #{i}", open_library_work_id: "OL_BATCH_#{i}")
       Request.create!(book: book, user: users(:one), status: :pending)
     end
 

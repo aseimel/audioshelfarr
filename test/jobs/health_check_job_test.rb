@@ -143,32 +143,18 @@ class HealthCheckJobTest < ActiveJob::TestCase
   # Output paths tests
   test "marks output_paths as healthy when paths exist and are writable" do
     Dir.mktmpdir do |audiobook_dir|
-      Dir.mktmpdir do |ebook_dir|
-        setup_output_paths(audiobook_dir, ebook_dir)
-
-        HealthCheckJob.perform_now
-
-        health = SystemHealth.for_service("output_paths")
-        assert health.healthy?
-        assert_includes health.message, "accessible"
-      end
-    end
-  end
-
-  test "marks output_paths as degraded when one path has issues" do
-    Dir.mktmpdir do |valid_dir|
-      setup_output_paths(valid_dir, "/nonexistent/path")
+      setup_output_paths(audiobook_dir)
 
       HealthCheckJob.perform_now
 
       health = SystemHealth.for_service("output_paths")
-      assert health.degraded?
-      assert_includes health.message, "Ebook path"
+      assert health.healthy?
+      assert_includes health.message, "accessible"
     end
   end
 
-  test "marks output_paths as down when both paths have issues" do
-    setup_output_paths("/nonexistent/audiobooks", "/nonexistent/ebooks")
+  test "marks output_paths as down when path does not exist" do
+    setup_output_paths("/nonexistent/audiobooks")
 
     HealthCheckJob.perform_now
 
@@ -176,14 +162,9 @@ class HealthCheckJobTest < ActiveJob::TestCase
     assert health.down?
   end
 
-  test "marks output_paths as down when paths not configured" do
-    # Set paths to empty strings (blank = not configured)
+  test "marks output_paths as down when path not configured" do
+    # Set path to empty string (blank = not configured)
     Setting.find_or_create_by(key: "audiobook_output_path").update!(
-      value: "",
-      value_type: "string",
-      category: "paths"
-    )
-    Setting.find_or_create_by(key: "ebook_output_path").update!(
       value: "",
       value_type: "string",
       category: "paths"
@@ -280,14 +261,9 @@ class HealthCheckJobTest < ActiveJob::TestCase
     )
   end
 
-  def setup_output_paths(audiobook_path, ebook_path)
+  def setup_output_paths(audiobook_path)
     Setting.find_or_create_by(key: "audiobook_output_path").update!(
       value: audiobook_path,
-      value_type: "string",
-      category: "paths"
-    )
-    Setting.find_or_create_by(key: "ebook_output_path").update!(
-      value: ebook_path,
       value_type: "string",
       category: "paths"
     )
