@@ -47,7 +47,6 @@ class SearchJobTest < ActiveJob::TestCase
 
   test "marks for attention when no search sources configured" do
     SettingsService.set(:prowlarr_api_key, "")
-    SettingsService.set(:anna_archive_enabled, false)
 
     SearchJob.perform_now(@request.id)
     @request.reload

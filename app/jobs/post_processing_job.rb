@@ -69,7 +69,16 @@ class PostProcessingJob < ApplicationJob
   end
 
   def library_id_for(book)
-    SettingsService.get(:audiobookshelf_audiobook_library_id)
+    configured_id = SettingsService.get(:audiobookshelf_audiobook_library_id)
+    return configured_id if configured_id.present?
+
+    # Fall back to first audiobook library from Audiobookshelf
+    libraries = AudiobookshelfClient.libraries
+    audiobook_lib = libraries.find(&:audiobook_library?)
+    audiobook_lib&.id
+  rescue AudiobookshelfClient::Error => e
+    Rails.logger.warn "[PostProcessingJob] Could not auto-discover library: #{e.message}"
+    nil
   end
 
   def copy_files(source, destination, book: nil)
@@ -87,19 +96,30 @@ class PostProcessingJob < ApplicationJob
     end
 
     Rails.logger.info "[PostProcessingJob] Copying from #{source} to #{destination}"
-    FileUtils.mkdir_p(destination)
 
     if File.directory?(source)
-      # Copy all files from source directory to destination
-      # Use Dir.entries instead of Dir.glob to avoid pattern matching issues
-      # (e.g., [AUDIOBOOK] in path being treated as character class)
-      # Files are COPIED (not moved) to preserve seeding on private trackers
-      files = Dir.entries(source).reject { |f| f.start_with?(".") }
-      Rails.logger.info "[PostProcessingJob] Found #{files.size} files/folders to copy"
-      files.each do |file|
-        FileCopyService.cp_r(File.join(source, file), destination)
+      # Copy to temp directory first, then rename to final destination
+      # This prevents partial copies from leaving corrupted state
+      temp_destination = "#{destination}.shelfarr-tmp-#{Process.pid}"
+      FileUtils.mkdir_p(temp_destination)
+
+      begin
+        files = Dir.entries(source).reject { |f| f.start_with?(".") }
+        Rails.logger.info "[PostProcessingJob] Found #{files.size} files/folders to copy"
+        files.each do |file|
+          FileCopyService.cp_r(File.join(source, file), temp_destination)
+        end
+
+        # All files copied successfully — move temp to final destination
+        FileUtils.rm_rf(destination) if File.exist?(destination)
+        FileUtils.mv(temp_destination, destination)
+      rescue => e
+        # Clean up temp directory on failure
+        FileUtils.rm_rf(temp_destination) if File.exist?(temp_destination)
+        raise
       end
     else
+      FileUtils.mkdir_p(destination)
       # Copy single file with renamed filename based on template
       extension = File.extname(source)
       new_filename = book ? PathTemplateService.build_filename(book, extension) : File.basename(source)
@@ -153,14 +173,15 @@ class PostProcessingJob < ApplicationJob
       Rails.logger.warn "[PostProcessingJob] Global remote_path is set (#{remote_path}) but doesn't match download path (#{path})"
     end
 
-    # Fall back to client-specific download path
-    # This is a simpler mapping that uses the basename (filename or folder name)
-    # Use this when global settings aren't configured or don't match
+    # Fall back to client-specific download path with basename
+    # Note: This only preserves the top-level folder/file name.
+    # For full path preservation, configure download_remote_path/download_local_path in Settings.
     if download.download_client&.download_path.present?
       client_path = download.download_client.download_path
-      basename = File.basename(path)
-      remapped = File.join(client_path, basename)
+      relative = File.basename(path)
+      remapped = File.join(client_path, relative)
       Rails.logger.info "[PostProcessingJob] Path remapped via client download_path: #{remapped}"
+      Rails.logger.info "[PostProcessingJob] Note: Only basename preserved. Configure download_remote_path/download_local_path for full path mapping."
       return remapped
     end
 

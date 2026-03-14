@@ -58,7 +58,15 @@ class AudiobookshelfClient
 
       loop do
         response = request { connection.get("/api/libraries/#{id}/items", { limit: page_size, page: page }) }
-        break unless response.status == 200
+        unless response.status == 200
+          if page == 1
+            Rails.logger.error "[AudiobookshelfClient] Failed to fetch library items (status: #{response.status})"
+            break
+          else
+            Rails.logger.warn "[AudiobookshelfClient] Pagination stopped at page #{page} (status: #{response.status}), returning #{items.size} items fetched so far"
+            break
+          end
+        end
 
         page_items = extract_library_items(response.body)
         items.concat(page_items)
@@ -84,17 +92,24 @@ class AudiobookshelfClient
       library_ids.each do |lib_id|
         next if lib_id.blank?
 
-        response = request { connection.get("/api/libraries/#{lib_id}/items") }
-        next unless response.status == 200
+        page = 0
+        loop do
+          response = request { connection.get("/api/libraries/#{lib_id}/items", { limit: 500, page: page }) }
+          break unless response.status == 200
 
-        items = response.body["results"] || []
-        item = items.find do |i|
-          item_path = i["path"] || i.dig("media", "path")
-          next false unless item_path
-          File.expand_path(item_path) == normalized_path
+          raw_items = response.body["results"] || response.body["items"] || response.body["libraryItems"] || []
+          break if raw_items.empty?
+
+          item = raw_items.find do |i|
+            item_path = i["path"] || i.dig("media", "path")
+            next false unless item_path
+            File.expand_path(item_path) == normalized_path
+          end
+
+          return item if item
+          break if raw_items.length < 500
+          page += 1
         end
-
-        return item if item
       end
 
       nil

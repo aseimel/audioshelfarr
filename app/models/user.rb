@@ -19,6 +19,8 @@ class User < ApplicationRecord
   validates :username, presence: true, uniqueness: { conditions: -> { where(deleted_at: nil) } },
     format: { with: /\A[a-z0-9_]+\z/, message: "only allows lowercase letters, numbers, and underscores" }
   validates :name, presence: true
+  validates :password, length: { minimum: 12 }, if: :password_digest_changed?
+  validate :password_complexity, if: :password_digest_changed?
 
   before_create :set_admin_if_first_user
 
@@ -199,7 +201,7 @@ class User < ApplicationRecord
     create!(
       username: username,
       name: name,
-      password: SecureRandom.hex(32),
+      password: SecureRandom.hex(16) + "A1",
       role: role,
       oidc_provider: provider,
       oidc_uid: uid
@@ -207,6 +209,20 @@ class User < ApplicationRecord
   end
 
   private
+
+  def password_complexity
+    return if password.blank?
+
+    unless password.match?(/[a-z]/)
+      errors.add(:password, "must include at least one lowercase letter")
+    end
+    unless password.match?(/[A-Z]/)
+      errors.add(:password, "must include at least one uppercase letter")
+    end
+    unless password.match?(/\d/)
+      errors.add(:password, "must include at least one number")
+    end
+  end
 
   def set_admin_if_first_user
     self.role = :admin if User.active.count.zero?

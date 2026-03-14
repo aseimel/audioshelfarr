@@ -35,7 +35,7 @@ class AudiobookshelfLibrarySyncService
       end
     end
 
-    synced = errors.empty? || items_synced.positive?
+    synced = errors.empty?
     Result.new(
       success: synced,
       items_synced: items_synced,

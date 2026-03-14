@@ -10,7 +10,8 @@ class DownloadMonitorJob < ApplicationJob
     return unless any_client_configured?
 
     monitor_active_downloads
-    schedule_next_run
+  ensure
+    schedule_next_run if any_client_configured?
   end
 
   private
@@ -49,14 +50,16 @@ class DownloadMonitorJob < ApplicationJob
   def handle_completed(download, info)
     Rails.logger.info "[DownloadMonitorJob] Download #{download.id} completed"
 
-    download.update!(
-      status: :completed,
-      progress: 100,
-      download_path: info.download_path
-    )
+    download.transaction do
+      download.update!(
+        status: :completed,
+        progress: 100,
+        download_path: info.download_path
+      )
 
-    # Trigger post-processing
-    PostProcessingJob.perform_later(download.id)
+      # Enqueue within transaction to ensure both happen atomically
+      PostProcessingJob.perform_later(download.id)
+    end
   end
 
   def handle_failed(download)
