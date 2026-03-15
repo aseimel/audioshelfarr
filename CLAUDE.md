@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Shelfarr is a self-hosted ebook and audiobook request and management system for the *arr ecosystem. It's a Ruby on Rails 8.1 application that combines Jellyseerr-style request UI with Radarr-style acquisition and processing for books. Integrates with Audiobookshelf for library management.
+Shelfarr is a self-hosted audiobook request and management system for the *arr ecosystem. It's a Ruby on Rails 8.1 application that combines Jellyseerr-style request UI with Radarr-style acquisition and processing for audiobooks. Integrates with Audiobookshelf for library management.
 
 **Stack:** Rails 8.1, SQLite, Hotwire (Turbo + Stimulus), Tailwind CSS, Solid Queue (background jobs), Puma
 
@@ -36,7 +36,7 @@ bin/bundler-audit         # Gem vulnerabilities
 
 ### Data Flow
 ```
-User Search → Open Library/Hardcover API → Results Cached
+User Search → Audible/Audnexus API → Results with Covers/Narrator/Duration
       ↓
 User Requests Book → Book Metadata Stored
       ↓
@@ -51,13 +51,13 @@ File Moved to Output Path → Audiobookshelf Library Sync (Optional)
 
 ### Key Directories
 
-- `app/services/` - Business logic abstraction layer. External API clients (ProwlarrClient, OpenLibraryClient, HardcoverClient, etc.) and processing services live here.
+- `app/services/` - Business logic abstraction layer. External API clients (ProwlarrClient, AudnexusClient, etc.) and processing services live here.
 - `app/jobs/` - Solid Queue background jobs. Key jobs: RequestQueueJob (orchestrator), SearchJob, DownloadJob, PostProcessingJob, DownloadMonitorJob.
 - `app/controllers/admin/` - Admin-only functionality (user management, settings, download clients, bulk operations).
 
 ### Core Models
 
-- **Book** - Metadata cache with dual source support (Open Library + Hardcover), book_type enum (audiobook/ebook)
+- **Book** - Metadata cache from Audible/Audnexus (ASIN, narrator, duration, cover, series)
 - **Request** - User book requests with status machine: pending → searching → downloading → processing → completed/failed/not_found
 - **Download** - Tracks active downloads with external_id linking to download client
 - **SearchResult** - Prowlarr/Anna's Archive results with confidence scoring
@@ -70,7 +70,8 @@ Download clients follow an adapter pattern in `app/services/download_clients/`:
 - `DownloadClientSelector` chooses client by type and priority
 
 Metadata services:
-- `MetadataService` provides unified search across Open Library and Hardcover
+- `MetadataService` provides audiobook search via Audible catalog + Audnexus enrichment (same pipeline as Audiobookshelf)
+- `AudnexusClient` handles Audible search and Audnexus API calls (narrator, cover, duration, series)
 - `MetadataExtractorService` extracts from uploaded files
 
 ### Background Jobs
@@ -95,8 +96,7 @@ Jobs run in-process via `SOLID_QUEUE_IN_PUMA=true` (no separate worker needed).
 
 | Service | Purpose | Client Location |
 |---------|---------|-----------------|
-| Open Library | Book metadata | `app/services/open_library_client.rb` |
-| Hardcover | Alternative metadata | `app/services/hardcover_client.rb` |
+| Audible/Audnexus | Audiobook metadata (covers, narrator, duration) | `app/services/audnexus_client.rb` |
 | Prowlarr | Indexer search | `app/services/prowlarr_client.rb` |
 | Anna's Archive | Direct ebook downloads | `app/services/anna_archive_client.rb` |
 | Audiobookshelf | Library sync | `app/services/audiobookshelf_client.rb` |

@@ -47,10 +47,6 @@ module Admin
         ProwlarrClient.reset_connection!
         run_service_health_check("prowlarr")
       end
-      if changed_keys.any? { |k| k.start_with?("hardcover") }
-        HardcoverClient.reset_connection!
-        run_service_health_check("hardcover")
-      end
       if changed_keys.any? { |k| k.start_with?("audiobook_output_path") }
         run_service_health_check_now("output_paths")
       end
@@ -147,27 +143,6 @@ module Admin
 
       AudiobookshelfLibrarySyncJob.perform_later
       redirect_to admin_settings_path, notice: "Audiobookshelf library sync started."
-    end
-
-    def test_hardcover
-      health = SystemHealth.for_service("hardcover")
-
-      unless HardcoverClient.configured?
-        health.mark_not_configured!
-        respond_with_flash(alert: "Hardcover is not configured. Enter API token first.")
-        return
-      end
-
-      if HardcoverClient.test_connection
-        health.check_succeeded!(message: "Connection successful")
-        respond_with_flash(notice: "Hardcover connection successful!")
-      else
-        health.check_failed!(message: "Failed to connect to Hardcover")
-        respond_with_flash(alert: "Hardcover connection failed.")
-      end
-    rescue HardcoverClient::Error => e
-      health&.check_failed!(message: e.message)
-      respond_with_flash(alert: "Hardcover error: #{e.message}")
     end
 
     def test_oidc

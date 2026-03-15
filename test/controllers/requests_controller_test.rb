@@ -56,11 +56,11 @@ class RequestsControllerTest < ActionDispatch::IntegrationTest
     # Create unique books for this test
     active_book = Book.create!(
       title: "Active Test Book Unique",
-      open_library_work_id: "OL_ACTIVE_FILTER_TEST"
+      asin: "B000ACTIVE01"
     )
     attention_book = Book.create!(
       title: "Attention Test Book Unique",
-      open_library_work_id: "OL_ATTENTION_FILTER_TEST"
+      asin: "B000ATTN01"
     )
 
     # Create an active request without attention needed
@@ -153,7 +153,7 @@ class RequestsControllerTest < ActionDispatch::IntegrationTest
 
   test "new shows request form with book info" do
     get new_request_path, params: {
-      work_id: "OL12345W",
+      work_id: "audnexus:B000TEST99",
       title: "Test Book",
       author: "Test Author"
     }
@@ -164,7 +164,7 @@ class RequestsControllerTest < ActionDispatch::IntegrationTest
   test "create creates book and request" do
     assert_difference [ "Book.count", "Request.count" ], 1 do
       post requests_path, params: {
-        work_id: "OL_NEW_123W",
+        work_id: "audnexus:B000NEW123",
         title: "New Book",
         author: "New Author"
       }
@@ -179,13 +179,13 @@ class RequestsControllerTest < ActionDispatch::IntegrationTest
   test "create reuses existing book" do
     existing_book = Book.create!(
       title: "Existing",
-      open_library_work_id: "OL_EXISTING_W"
+      asin: "B000EXISTING"
     )
 
     assert_no_difference "Book.count" do
       assert_difference "Request.count", 1 do
         post requests_path, params: {
-          work_id: "OL_EXISTING_W",
+          work_id: "audnexus:B000EXISTING",
           title: "Existing"
         }
       end
@@ -195,13 +195,13 @@ class RequestsControllerTest < ActionDispatch::IntegrationTest
   test "create blocks duplicate for acquired book" do
     book = Book.create!(
       title: "Acquired",
-      open_library_work_id: "OL_ACQUIRED_W",
+      asin: "B000ACQUIRED",
       file_path: "/audiobooks/Author/Acquired"
     )
 
     assert_no_difference [ "Book.count", "Request.count" ] do
       post requests_path, params: {
-        work_id: "OL_ACQUIRED_W",
+        work_id: "audnexus:B000ACQUIRED",
         title: "Acquired"
       }
     end
@@ -228,7 +228,7 @@ class RequestsControllerTest < ActionDispatch::IntegrationTest
   test "destroy cleans up orphaned book without requests" do
     book = Book.create!(
       title: "Orphan Book",
-      open_library_work_id: "OL_ORPHAN_W"
+      asin: "B000ORPHAN"
     )
     request = Request.create!(book: book, user: @user, status: :pending)
 

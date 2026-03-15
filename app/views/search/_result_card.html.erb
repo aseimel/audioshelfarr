@@ -66,12 +66,19 @@
       </span>
     <% end %>
 
+    <%# Duration Badge (bottom left) %>
+    <% if result.respond_to?(:duration_minutes) && result.duration_minutes.present? && result.duration_minutes > 0 %>
+      <span class="absolute bottom-2 left-2 px-2 py-0.5 rounded text-xs font-medium bg-black/60 text-white backdrop-blur-sm">
+        <%= result.duration_minutes / 60 %>h <%= result.duration_minutes % 60 %>m
+      </span>
+    <% end %>
+
     <%# Hover Overlay %>
     <div class="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3">
       <%# Request Buttons %>
       <div class="flex flex-col gap-2">
         <% if book_status == :available %>
-          <%= button_to quick_request_path, method: :post, class: "flex items-center justify-center gap-2 w-full px-3 py-2 rounded-md text-sm font-medium bg-purple-600 hover:bg-purple-500 text-white transition-colors", params: { work_id: result.work_id, title: result.title, author: result.author, cover_url: result.cover_url, first_publish_year: result.first_publish_year } do %>
+          <%= button_to quick_request_path, method: :post, class: "flex items-center justify-center gap-2 w-full px-3 py-2 rounded-md text-sm font-medium bg-purple-600 hover:bg-purple-500 text-white transition-colors", params: { work_id: result.work_id, title: result.title, author: result.author, cover_url: result.cover_url, first_publish_year: result.first_publish_year, narrator: (result.narrator if result.respond_to?(:narrator)), duration_minutes: (result.duration_minutes if result.respond_to?(:duration_minutes)) } do %>
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
@@ -95,6 +102,9 @@
     <h3 class="font-semibold text-white text-sm leading-tight line-clamp-2"><%= result.title %></h3>
     <% if result.author.present? %>
       <p class="text-xs text-gray-400 mt-1 truncate"><%= result.author %></p>
+    <% end %>
+    <% if result.respond_to?(:narrator) && result.narrator.present? %>
+      <p class="text-xs text-gray-500 mt-0.5 truncate">Narrated by <%= result.narrator %></p>
     <% end %>
     <% if audiobookshelf_matches.any? %>
       <div class="mt-2 pt-2 border-t border-gray-700">

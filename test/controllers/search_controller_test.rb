@@ -21,10 +21,10 @@ class SearchControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "results returns search results" do
-    with_cassette("open_library/search_harry_potter") do
-      get search_results_path, params: { q: "harry potter" }
-      assert_response :success
-    end
+    stub_audible_and_audnexus("harry potter")
+
+    get search_results_path, params: { q: "harry potter" }
+    assert_response :success
   end
 
   test "results with empty query returns empty results" do
@@ -33,11 +33,11 @@ class SearchControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "results handles turbo stream format" do
-    with_cassette("open_library/search_fiction") do
-      get search_results_path, params: { q: "fiction" }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
-      assert_response :success
-      assert_match "turbo-stream", response.body
-    end
+    stub_audible_and_audnexus("fiction")
+
+    get search_results_path, params: { q: "fiction" }, headers: { "Accept" => "text/vnd.turbo-stream.html" }
+    assert_response :success
+    assert_match "turbo-stream", response.body
   end
 
   test "results shows warning when matching audiobookshelf item exists" do
@@ -90,5 +90,33 @@ class SearchControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_no_match "Similar book may already exist", response.body
+  end
+
+  private
+
+  def stub_audible_and_audnexus(query)
+    stub_request(:get, /api\.audible\.com\/1\.0\/catalog\/products/)
+      .to_return(
+        status: 200,
+        headers: { "Content-Type" => "application/json" },
+        body: { "products" => [{ "asin" => "B017V4IM1G" }] }.to_json
+      )
+
+    stub_request(:get, "https://api.audnex.us/books/B017V4IM1G")
+      .to_return(
+        status: 200,
+        headers: { "Content-Type" => "application/json" },
+        body: {
+          "asin" => "B017V4IM1G",
+          "title" => "Harry Potter and the Sorcerer's Stone",
+          "authors" => [{ "name" => "J.K. Rowling" }],
+          "narrators" => [{ "name" => "Jim Dale" }],
+          "summary" => "A great book",
+          "releaseDate" => "2015-11-20",
+          "image" => "https://example.com/cover.jpg",
+          "runtimeLengthMin" => 498,
+          "language" => "english"
+        }.to_json
+      )
   end
 end

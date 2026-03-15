@@ -3,7 +3,7 @@
 # Processes uploaded files:
 # 1. Extracts metadata from file (ID3 tags, EPUB OPF, etc.)
 # 2. Falls back to filename parsing if extraction fails
-# 3. Searches metadata sources (Hardcover/OpenLibrary) for enrichment
+# 3. Searches metadata sources (Audible/Audnexus) for enrichment
 # 4. Creates book with proper metadata
 # 5. Renames file and moves to library location
 class UploadProcessingJob < ApplicationJob
@@ -109,7 +109,7 @@ class UploadProcessingJob < ApplicationJob
     # Only return if score is reasonable
     score = score_result(best_match, title, author)
     score >= 30 ? best_match : nil
-  rescue HardcoverClient::Error, OpenLibraryClient::Error, MetadataService::Error => e
+  rescue AudnexusClient::Error, MetadataService::Error => e
     Rails.logger.warn "[UploadProcessingJob] Metadata search failed: #{e.message}"
     nil
   end
@@ -164,7 +164,8 @@ class UploadProcessingJob < ApplicationJob
     year = metadata&.year || extracted&.year
     description = metadata&.description || extracted&.description
     series = metadata&.series_name if metadata.respond_to?(:series_name)
-    narrator = extracted&.narrator if extracted.respond_to?(:narrator)
+    narrator = metadata&.narrator.presence || (extracted&.narrator if extracted.respond_to?(:narrator))
+    duration_minutes = metadata&.duration_minutes if metadata.respond_to?(:duration_minutes)
 
     # Check for existing book with same work_id
     if work_id.present?
@@ -188,6 +189,7 @@ class UploadProcessingJob < ApplicationJob
         description: description,
         series: series,
         narrator: narrator,
+        duration_minutes: duration_minutes,
         metadata_source: source
       )
       book.save!
@@ -200,7 +202,8 @@ class UploadProcessingJob < ApplicationJob
         year: year,
         description: description,
         series: series,
-        narrator: narrator
+        narrator: narrator,
+        duration_minutes: duration_minutes
       )
     end
   end

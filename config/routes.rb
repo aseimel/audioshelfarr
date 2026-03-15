@@ -82,7 +82,6 @@ Rails.application.routes.draw do
         post :test_prowlarr
         post :sync_audiobookshelf_library
         post :test_audiobookshelf
-        post :test_hardcover
         post :test_oidc
       end
     end

@@ -43,6 +43,8 @@ class RequestsController < ApplicationController
     @author = params[:author]
     @cover_url = params[:cover_url]
     @first_publish_year = params[:first_publish_year]
+    @narrator = params[:narrator]
+    @duration_minutes = params[:duration_minutes]
 
     if @work_id.blank? || @title.blank?
       redirect_to search_path, alert: "Missing book information"
@@ -340,6 +342,8 @@ class RequestsController < ApplicationController
         author: params[:author],
         cover_url: params[:cover_url],
         year: params[:first_publish_year],
+        narrator: params[:narrator],
+        duration_minutes: params[:duration_minutes],
         metadata_source: source
       )
       book.save!

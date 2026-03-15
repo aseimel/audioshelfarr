@@ -27,6 +27,9 @@
           <% if @book.author.present? %>
             <p class="text-gray-600 mb-2"><%= @book.author %></p>
           <% end %>
+          <% if @book.narrator.present? %>
+            <p class="text-sm text-gray-500 mb-2">Narrated by <%= @book.narrator %></p>
+          <% end %>
 
           <div class="flex flex-wrap gap-2 mb-4">
             <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
@@ -42,6 +45,9 @@
 
           <% if @book.year.present? %>
             <p class="text-sm text-gray-500">First published <%= @book.year %></p>
+          <% end %>
+          <% if @book.formatted_duration.present? %>
+            <p class="text-sm text-gray-500">Duration: <%= @book.formatted_duration %></p>
           <% end %>
         </div>
       </div>

@@ -13,8 +13,8 @@ class RequestRetryTest < ActiveSupport::TestCase
 
   test "processable returns pending requests ordered by created_at" do
     # Create two pending requests with specific order
-    older_book = Book.create!(title: "Older Processable", open_library_work_id: "OL_OLDER_P")
-    newer_book = Book.create!(title: "Newer Processable", open_library_work_id: "OL_NEWER_P")
+    older_book = Book.create!(title: "Older Processable", asin: "OL_OLDER_P")
+    newer_book = Book.create!(title: "Newer Processable", asin: "OL_NEWER_P")
 
     older_request = Request.create!(book: older_book, user: users(:one), status: :pending, created_at: 2.days.ago)
     newer_request = Request.create!(book: newer_book, user: users(:one), status: :pending, created_at: 1.day.ago)
@@ -149,7 +149,7 @@ class RequestRetryTest < ActiveSupport::TestCase
   end
 
   test "retry_now! retries download when there is a selected result and failed download" do
-    book = Book.create!(title: "Test Book", open_library_work_id: "OL_RETRY_DL")
+    book = Book.create!(title: "Test Book", asin: "OL_RETRY_DL")
     request = Request.create!(
       book: book,
       user: users(:one),
@@ -189,7 +189,7 @@ class RequestRetryTest < ActiveSupport::TestCase
   end
 
   test "retry_now! restarts search when there is a selected result but no failed download" do
-    book = Book.create!(title: "Test Book 2", open_library_work_id: "OL_RETRY_SEARCH")
+    book = Book.create!(title: "Test Book 2", asin: "OL_RETRY_SEARCH")
     request = Request.create!(
       book: book,
       user: users(:one),
@@ -246,7 +246,7 @@ class RequestRetryTest < ActiveSupport::TestCase
   # === select_result! ===
 
   test "select_result! clears attention_needed and issue_description" do
-    book = Book.create!(title: "Select Test Book", open_library_work_id: "OL_SELECT_TEST")
+    book = Book.create!(title: "Select Test Book", asin: "OL_SELECT_TEST")
     request = Request.create!(
       book: book,
       user: users(:one),
@@ -315,7 +315,7 @@ class RequestRetryTest < ActiveSupport::TestCase
   # === needs_manual_selection? ===
 
   test "needs_manual_selection? returns true when searching with pending results" do
-    book = Book.create!(title: "Manual Select Book", open_library_work_id: "OL_MANUAL_SEL")
+    book = Book.create!(title: "Manual Select Book", asin: "OL_MANUAL_SEL")
     request = Request.create!(
       book: book,
       user: users(:one),
@@ -337,7 +337,7 @@ class RequestRetryTest < ActiveSupport::TestCase
   end
 
   test "needs_manual_selection? returns false for non-searching status" do
-    book = Book.create!(title: "Non-Search Book", open_library_work_id: "OL_NON_SEARCH")
+    book = Book.create!(title: "Non-Search Book", asin: "OL_NON_SEARCH")
     request = Request.create!(
       book: book,
       user: users(:one),
@@ -355,7 +355,7 @@ class RequestRetryTest < ActiveSupport::TestCase
   end
 
   test "needs_manual_selection? returns false when only selected results exist" do
-    book = Book.create!(title: "Selected Book", open_library_work_id: "OL_SELECTED")
+    book = Book.create!(title: "Selected Book", asin: "OL_SELECTED")
     request = Request.create!(
       book: book,
       user: users(:one),
@@ -458,7 +458,7 @@ class RequestRetryTest < ActiveSupport::TestCase
   end
 
   test "cancel! removes active downloads from download client" do
-    book = Book.create!(title: "Cancel Test Book", open_library_work_id: "OL_CANCEL_TEST")
+    book = Book.create!(title: "Cancel Test Book", asin: "OL_CANCEL_TEST")
     request = Request.create!(
       book: book,
       user: users(:one),
@@ -482,7 +482,7 @@ class RequestRetryTest < ActiveSupport::TestCase
   end
 
   test "cancel! also cancels paused downloads" do
-    book = Book.create!(title: "Paused Cancel Book", open_library_work_id: "OL_PAUSED_CANCEL")
+    book = Book.create!(title: "Paused Cancel Book", asin: "OL_PAUSED_CANCEL")
     request = Request.create!(
       book: book,
       user: users(:one),

@@ -64,6 +64,15 @@ class SearchJob < ApplicationJob
       end
     end
 
+    # Fallback: try title-only query WITHOUT category filter to catch audiobooks in unexpected categories
+    fallback_query = language_term ? "#{book.title} #{language_term}" : book.title
+    Rails.logger.info "[SearchJob] Trying category-less fallback query: #{fallback_query}"
+    results = ProwlarrClient.search(fallback_query, categories: [])
+    if results.any?
+      Rails.logger.info "[SearchJob] Found #{results.count} results with category-less fallback"
+      return results
+    end
+
     [] # No results from any query
   end
 
@@ -78,12 +87,14 @@ class SearchJob < ApplicationJob
     if author.present?
       base = "#{author} #{title}"
       queries << (language_term ? "#{base} #{language_term}" : base)
+      queries << (language_term ? "#{base} audiobook #{language_term}" : "#{base} audiobook")
     end
 
     # Variation 2: title + author (reversed)
     if author.present?
       base = "#{title} #{author}"
       queries << (language_term ? "#{base} #{language_term}" : base)
+      queries << (language_term ? "#{base} audiobook #{language_term}" : "#{base} audiobook")
     end
 
     # Variation 3: title only (broader)

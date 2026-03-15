@@ -3,191 +3,110 @@
 require "test_helper"
 
 class MetadataServiceTest < ActiveSupport::TestCase
-  setup do
-    @original_source = SettingsService.get(:metadata_source)
-    @original_token = SettingsService.get(:hardcover_api_token)
-    HardcoverClient.reset_connection!
+  test "search returns results from audnexus" do
+    stub_audible_search(["B017V4IM1G"])
+    stub_audnexus_book("B017V4IM1G", audnexus_book_data)
+
+    results = MetadataService.search("harry potter")
+
+    assert results.any?
+    assert_equal "audnexus", results.first.source
+    assert_equal "B017V4IM1G", results.first.source_id
+    assert_equal "Harry Potter and the Sorcerer's Stone, Book 1", results.first.title
+    assert_equal "Jim Dale", results.first.narrator
+    assert_equal 498, results.first.duration_minutes
   end
 
-  teardown do
-    SettingsService.set(:metadata_source, @original_source || "auto")
-    SettingsService.set(:hardcover_api_token, @original_token || "")
-    HardcoverClient.reset_connection!
+  test "search returns empty array when no results" do
+    stub_audible_search([])
+
+    results = MetadataService.search("nonexistent book xyz123")
+    assert_equal [], results
   end
 
-  test "search uses openlibrary when source is openlibrary" do
-    SettingsService.set(:metadata_source, "openlibrary")
+  test "book_details handles audnexus work_id" do
+    stub_audnexus_book("B017V4IM1G", audnexus_book_data)
 
-    with_cassette("open_library/search_harry_potter") do
-      results = MetadataService.search("harry potter")
+    result = MetadataService.book_details("audnexus:B017V4IM1G")
 
-      assert results.any?
-      assert_equal "openlibrary", results.first.source
-    end
+    assert_equal "audnexus", result.source
+    assert_equal "Harry Potter and the Sorcerer's Stone, Book 1", result.title
   end
 
-  test "search uses hardcover when source is hardcover and configured" do
-    SettingsService.set(:metadata_source, "hardcover")
-    SettingsService.set(:hardcover_api_token, "test_token")
-
-    VCR.turned_off do
-      stub_hardcover_search([
-        { "id" => 456, "title" => "Harry Potter", "author_names" => [ "J.K. Rowling" ],
-          "release_year" => 1997, "cached_image" => nil, "has_audiobook" => true }
-      ])
-
-      results = MetadataService.search("harry potter")
-
-      assert results.any?
-      assert_equal "hardcover", results.first.source
-    end
-  end
-
-  test "search falls back to openlibrary when hardcover returns no results in auto mode" do
-    SettingsService.set(:metadata_source, "auto")
-    SettingsService.set(:hardcover_api_token, "test_token")
-
-    VCR.turned_off do
-      # First call - Hardcover returns no results
-      stub_hardcover_search([])
-    end
-
-    with_cassette("open_library/search_harry_potter") do
-      results = MetadataService.search("harry potter")
-
-      assert results.any?
-      assert_equal "openlibrary", results.first.source
-    end
-  end
-
-  test "search uses openlibrary when hardcover not configured in auto mode" do
-    SettingsService.set(:metadata_source, "auto")
-    SettingsService.set(:hardcover_api_token, "")
-
-    with_cassette("open_library/search_harry_potter") do
-      results = MetadataService.search("harry potter")
-
-      assert results.any?
-      assert_equal "openlibrary", results.first.source
-    end
-  end
-
-  test "book_details handles hardcover work_id" do
-    SettingsService.set(:hardcover_api_token, "test_token")
-
-    VCR.turned_off do
-      stub_hardcover_book({
-        "id" => 12345,
-        "title" => "Test Book",
-        "description" => "Description",
-        "release_year" => 2020,
-        "cached_image" => "https://example.com/cover.jpg",
-        "contributions" => [ { "author" => { "name" => "Test Author" } } ],
-        "default_physical_edition" => nil,
-        "book_series" => []
-      })
-
-      result = MetadataService.book_details("hardcover:12345")
-
-      assert_equal "hardcover", result.source
-      assert_equal "Test Book", result.title
-    end
-  end
-
-  test "book_details handles openlibrary work_id" do
-    with_cassette("open_library/work_details") do
-      result = MetadataService.book_details("openlibrary:OL45804W")
-
-      assert_equal "openlibrary", result.source
-      assert result.title.present?
-    end
-  end
-
-  test "book_details handles legacy work_id without prefix" do
-    with_cassette("open_library/work_details") do
-      result = MetadataService.book_details("OL45804W")
-
-      assert_equal "openlibrary", result.source
+  test "book_details raises for unknown source" do
+    assert_raises(ArgumentError) do
+      MetadataService.book_details("unknown:123")
     end
   end
 
   test "SearchResult has unified interface" do
     result = MetadataService::SearchResult.new(
-      source: "hardcover",
-      source_id: "123",
+      source: "audnexus",
+      source_id: "B017V4IM1G",
       title: "Test Book",
       author: "Test Author",
       description: "Description",
       year: 2020,
       cover_url: "https://example.com/cover.jpg",
-      has_audiobook: true,
-      series_name: "Test Series"
+      series_name: "Test Series",
+      narrator: "Test Narrator",
+      duration_minutes: 600
     )
 
-    assert_equal "hardcover:123", result.work_id
+    assert_equal "audnexus:B017V4IM1G", result.work_id
     assert_equal 2020, result.first_publish_year
     assert_nil result.cover_id
+    assert_equal "Test Narrator", result.narrator
+    assert_equal 600, result.duration_minutes
   end
 
-  test "metadata_source returns configured value" do
-    SettingsService.set(:metadata_source, "hardcover")
-    assert_equal "hardcover", MetadataService.metadata_source
-
-    SettingsService.set(:metadata_source, "openlibrary")
-    assert_equal "openlibrary", MetadataService.metadata_source
-
-    SettingsService.set(:metadata_source, "auto")
-    assert_equal "auto", MetadataService.metadata_source
-  end
-
-  test "available? returns true when openlibrary source" do
-    SettingsService.set(:metadata_source, "openlibrary")
+  test "available? always returns true" do
     assert MetadataService.available?
   end
 
-  test "available? returns true when auto source" do
-    SettingsService.set(:metadata_source, "auto")
-    assert MetadataService.available?
-  end
+  test "test_connections returns audnexus status" do
+    stub_request(:get, "https://api.audnex.us/books/B017V4IM1G")
+      .to_return(status: 200, body: audnexus_book_data.to_json, headers: { "Content-Type" => "application/json" })
 
-  test "available? returns true when hardcover configured" do
-    SettingsService.set(:metadata_source, "hardcover")
-    SettingsService.set(:hardcover_api_token, "test_token")
-    assert MetadataService.available?
-  end
-
-  test "available? returns false when hardcover not configured" do
-    SettingsService.set(:metadata_source, "hardcover")
-    SettingsService.set(:hardcover_api_token, "")
-    assert_not MetadataService.available?
+    results = MetadataService.test_connections
+    assert results.key?(:audnexus)
   end
 
   private
 
-  def stub_hardcover_search(results)
-    typesense_response = {
-      "facet_counts" => [],
-      "found" => results.size,
-      "hits" => results.map { |r| { "document" => r } },
-      "request_params" => {},
-      "search_cutoff" => false,
-      "search_time_ms" => 5
-    }
-
-    stub_request(:post, HardcoverClient::BASE_URL)
+  def stub_audible_search(asins)
+    products = asins.map { |asin| { "asin" => asin } }
+    stub_request(:get, /api\.audible\.com\/1\.0\/catalog\/products/)
       .to_return(
         status: 200,
         headers: { "Content-Type" => "application/json" },
-        body: { "data" => { "search" => { "results" => typesense_response } } }.to_json
+        body: { "products" => products }.to_json
       )
   end
 
-  def stub_hardcover_book(book_data)
-    stub_request(:post, HardcoverClient::BASE_URL)
+  def stub_audnexus_book(asin, data)
+    stub_request(:get, "https://api.audnex.us/books/#{asin}")
       .to_return(
         status: 200,
         headers: { "Content-Type" => "application/json" },
-        body: { "data" => { "books" => [ book_data ] } }.to_json
+        body: data.to_json
       )
+  end
+
+  def audnexus_book_data
+    {
+      "asin" => "B017V4IM1G",
+      "title" => "Harry Potter and the Sorcerer's Stone, Book 1",
+      "authors" => [{ "asin" => "B000AP9A6K", "name" => "J.K. Rowling" }],
+      "narrators" => [{ "name" => "Jim Dale" }],
+      "publisherName" => "Pottermore Publishing",
+      "summary" => "Jim Dale's Grammy Award-winning performance...",
+      "releaseDate" => "2015-11-20T00:00:00.000Z",
+      "image" => "https://m.media-amazon.com/images/I/91eopoUCjLL.jpg",
+      "runtimeLengthMin" => 498,
+      "seriesPrimary" => { "asin" => "B0182NWM9I", "name" => "Harry Potter", "position" => "1" },
+      "language" => "english",
+      "genres" => [{ "asin" => "18572091011", "name" => "Children's Audiobooks", "type" => "genre" }]
+    }
   end
 end

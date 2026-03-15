@@ -15,9 +15,18 @@ class Book < ApplicationRecord
     author.present? ? "#{title} by #{author}" : title
   end
 
+  def formatted_duration
+    return nil unless duration_minutes.present? && duration_minutes > 0
+    hours = duration_minutes / 60
+    mins = duration_minutes % 60
+    hours > 0 ? "#{hours}h #{mins}m" : "#{mins}m"
+  end
+
   # Returns unified work_id in format "source:id"
   def unified_work_id
-    if hardcover_id.present?
+    if asin.present?
+      "audnexus:#{asin}"
+    elsif hardcover_id.present?
       "hardcover:#{hardcover_id}"
     elsif open_library_work_id.present?
       "openlibrary:#{open_library_work_id}"
@@ -25,7 +34,6 @@ class Book < ApplicationRecord
   end
 
   # Parse a work_id into [source, source_id]
-  # Handles both prefixed ("hardcover:123") and legacy ("OL45804W") formats
   def self.parse_work_id(work_id)
     parts = work_id.to_s.split(":", 2)
     if parts.length == 2
@@ -40,6 +48,8 @@ class Book < ApplicationRecord
   def self.find_by_work_id(work_id)
     source, source_id = parse_work_id(work_id)
     case source
+    when "audnexus"
+      find_by(asin: source_id)
     when "hardcover"
       find_by(hardcover_id: source_id)
     else
@@ -51,6 +61,8 @@ class Book < ApplicationRecord
   def self.find_or_initialize_by_work_id(work_id)
     source, source_id = parse_work_id(work_id)
     case source
+    when "audnexus"
+      find_or_initialize_by(asin: source_id)
     when "hardcover"
       find_or_initialize_by(hardcover_id: source_id)
     else

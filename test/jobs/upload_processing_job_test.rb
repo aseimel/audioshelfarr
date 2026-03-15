@@ -37,7 +37,7 @@ class UploadProcessingJobTest < ActiveJob::TestCase
 
   test "processes upload and creates book" do
     VCR.turned_off do
-      stub_open_library_search("Mistborn Brandon Sanderson")
+      stub_audnexus_empty_search
 
       assert_difference "Book.count", 1 do
         UploadProcessingJob.perform_now(@upload.id)
@@ -53,7 +53,7 @@ class UploadProcessingJobTest < ActiveJob::TestCase
 
   test "moves file to correct location" do
     VCR.turned_off do
-      stub_open_library_search("Mistborn Brandon Sanderson")
+      stub_audnexus_empty_search
 
       UploadProcessingJob.perform_now(@upload.id)
 
@@ -67,7 +67,7 @@ class UploadProcessingJobTest < ActiveJob::TestCase
 
   test "matches existing book instead of creating new" do
     VCR.turned_off do
-      stub_open_library_search("Mistborn Brandon Sanderson")
+      stub_audnexus_empty_search
 
       existing = Book.create!(
         title: "Mistborn",
@@ -85,7 +85,7 @@ class UploadProcessingJobTest < ActiveJob::TestCase
 
   test "handles failed processing due to missing file" do
     VCR.turned_off do
-      stub_open_library_search("Mistborn Brandon Sanderson")
+      stub_audnexus_empty_search
 
       FileUtils.rm(@test_file)
 
@@ -114,7 +114,7 @@ class UploadProcessingJobTest < ActiveJob::TestCase
 
   test "sets processed_at timestamp on success" do
     VCR.turned_off do
-      stub_open_library_search("Mistborn Brandon Sanderson")
+      stub_audnexus_empty_search
 
       UploadProcessingJob.perform_now(@upload.id)
 
@@ -125,7 +125,7 @@ class UploadProcessingJobTest < ActiveJob::TestCase
 
   test "updates match confidence from parser" do
     VCR.turned_off do
-      stub_open_library_search("Mistborn Brandon Sanderson")
+      stub_audnexus_empty_search
 
       UploadProcessingJob.perform_now(@upload.id)
 
@@ -137,14 +137,14 @@ class UploadProcessingJobTest < ActiveJob::TestCase
 
   private
 
-  def stub_open_library_search(query)
-    # Stub Open Library search to return empty results
+  def stub_audnexus_empty_search
+    # Stub Audible catalog search to return empty results
     # This allows tests to focus on file operations and book creation
-    stub_request(:get, %r{https://openlibrary\.org/search\.json})
+    stub_request(:get, /api\.audible\.com\/1\.0\/catalog\/products/)
       .to_return(
         status: 200,
         headers: { "Content-Type" => "application/json" },
-        body: { numFound: 0, docs: [] }.to_json
+        body: { "products" => [] }.to_json
       )
   end
 end

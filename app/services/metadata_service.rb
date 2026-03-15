@@ -1,20 +1,20 @@
 # frozen_string_literal: true
 
-# Unified service for fetching book metadata from configured sources
-# Orchestrates Hardcover (primary) and OpenLibrary (fallback) based on settings
+# Unified service for fetching audiobook metadata from Audible/Audnexus.
+# Uses the same pipeline as Audiobookshelf: Audible catalog search + Audnexus enrichment.
 class MetadataService
   class Error < StandardError; end
 
-  # Unified result structure compatible with both sources
+  # Unified result structure
   SearchResult = Data.define(
     :source, :source_id, :title, :author, :description, :year,
-    :cover_url, :has_audiobook, :series_name
+    :cover_url, :series_name, :narrator, :duration_minutes
   ) do
     def work_id
       "#{source}:#{source_id}"
     end
 
-    # Compatibility with OpenLibrary patterns
+    # Compatibility with view patterns
     def first_publish_year
       year
     end
@@ -25,171 +25,64 @@ class MetadataService
   end
 
   class << self
-    # Search for books across configured metadata sources
-    # Returns array of SearchResult
+    # Search for audiobooks. Returns array of SearchResult.
     def search(query, limit: 10)
-      source = metadata_source
+      Rails.logger.info "[MetadataService] Searching '#{query}' via Audible/Audnexus"
 
-      Rails.logger.info "[MetadataService] Searching '#{query}' using source: #{source}"
-
-      case source
-      when "hardcover"
-        search_hardcover(query, limit)
-      when "openlibrary"
-        search_openlibrary(query, limit)
-      else # "auto"
-        search_with_fallback(query, limit)
-      end
+      # Parse query into title/author if possible
+      title, author = parse_query(query)
+      results = AudnexusClient.search(title, author: author, limit: limit)
+      results.map { |r| normalize_result(r) }
+    rescue AudnexusClient::Error => e
+      Rails.logger.error "[MetadataService] Search failed: #{e.message}"
+      []
     end
 
-    # Get book details by unified work_id (format: "source:id")
+    # Get book details by unified work_id (format: "audnexus:{asin}")
     def book_details(work_id)
       source, id = parse_work_id(work_id)
 
       Rails.logger.info "[MetadataService] Fetching details for #{work_id}"
 
       case source
-      when "hardcover"
-        fetch_hardcover_details(id)
-      when "openlibrary", "OL"
-        fetch_openlibrary_details(id)
+      when "audnexus"
+        result = AudnexusClient.book(id)
+        result ? normalize_result(result) : raise(Error, "Book not found: #{id}")
       else
         raise ArgumentError, "Unknown metadata source: #{source}"
       end
     end
 
-    # Test all configured metadata sources
+    # Test metadata source connectivity
     def test_connections
-      results = {}
-
-      if HardcoverClient.configured?
-        results[:hardcover] = HardcoverClient.test_connection rescue false
-      end
-
-      # OpenLibrary doesn't require configuration
-      results[:openlibrary] = begin
-        OpenLibraryClient.search("test", limit: 1)
-        true
-      rescue
-        false
-      end
-
-      results
+      {
+        audnexus: begin
+          AudnexusClient.test_connection
+        rescue
+          false
+        end
+      }
     end
 
-    # Determine primary metadata source
-    def metadata_source
-      SettingsService.get(:metadata_source, default: "auto")
-    end
-
-    # Check if any metadata source is available
+    # Always available (no config needed)
     def available?
-      metadata_source == "openlibrary" ||
-        (metadata_source == "hardcover" && HardcoverClient.configured?) ||
-        (metadata_source == "auto") # OpenLibrary always available as fallback
+      true
     end
 
     private
 
-    def search_hardcover(query, limit)
-      return [] unless HardcoverClient.configured?
-
-      results = HardcoverClient.search(query, limit: limit)
-      results.map { |r| normalize_hardcover_result(r) }
-    rescue HardcoverClient::Error => e
-      Rails.logger.error "[MetadataService] Hardcover search failed: #{e.message}"
-      []
-    end
-
-    def search_openlibrary(query, limit)
-      results = OpenLibraryClient.search(query, limit: limit)
-      results.map { |r| normalize_openlibrary_result(r) }
-    rescue OpenLibraryClient::Error => e
-      Rails.logger.error "[MetadataService] OpenLibrary search failed: #{e.message}"
-      []
-    end
-
-    def search_with_fallback(query, limit)
-      # Try Hardcover first if configured
-      if HardcoverClient.configured?
-        results = search_hardcover(query, limit)
-        if results.any?
-          Rails.logger.info "[MetadataService] Found #{results.size} results from Hardcover"
-          return results
-        end
-
-        Rails.logger.info "[MetadataService] No Hardcover results, falling back to OpenLibrary"
-      end
-
-      # Fallback to OpenLibrary
-      results = search_openlibrary(query, limit)
-      Rails.logger.info "[MetadataService] Found #{results.size} results from OpenLibrary"
-      results
-    end
-
-    def fetch_hardcover_details(id)
-      details = HardcoverClient.book(id)
-      normalize_hardcover_details(details)
-    end
-
-    def fetch_openlibrary_details(work_id)
-      work = OpenLibraryClient.work(work_id)
-      normalize_openlibrary_work(work)
-    end
-
-    def normalize_hardcover_result(result)
+    def normalize_result(result)
       SearchResult.new(
-        source: "hardcover",
-        source_id: result.id.to_s,
+        source: "audnexus",
+        source_id: result.asin,
         title: result.title,
         author: result.author,
         description: truncate_description(result.description),
-        year: result.release_year,
+        year: result.year,
         cover_url: result.cover_url,
-        has_audiobook: result.has_audiobook,
-        series_name: nil
-      )
-    end
-
-    def normalize_openlibrary_result(result)
-      SearchResult.new(
-        source: "openlibrary",
-        source_id: result.work_id,
-        title: result.title,
-        author: result.author,
-        description: nil, # OpenLibrary search doesn't return description
-        year: result.first_publish_year,
-        cover_url: result.cover_url(size: :l),
-        has_audiobook: nil, # Unknown from OpenLibrary
-        series_name: nil
-      )
-    end
-
-    def normalize_hardcover_details(details)
-      SearchResult.new(
-        source: "hardcover",
-        source_id: details.id.to_s,
-        title: details.title,
-        author: details.author,
-        description: details.description,
-        year: details.release_year,
-        cover_url: details.cover_url,
-        has_audiobook: details.has_audiobook,
-        series_name: details.series_name
-      )
-    end
-
-    def normalize_openlibrary_work(work)
-      SearchResult.new(
-        source: "openlibrary",
-        source_id: work.work_id,
-        title: work.title,
-        author: nil, # Work doesn't include author
-        description: work.description,
-        year: parse_year(work.first_publish_date),
-        cover_url: work.cover_url(size: :l),
-        has_audiobook: nil,
-        series_name: nil
+        series_name: result.series_name,
+        narrator: result.narrator,
+        duration_minutes: result.duration_minutes
       )
     end
 
@@ -197,15 +90,18 @@ class MetadataService
       Book.parse_work_id(work_id)
     end
 
-    def parse_year(date_string)
-      return nil if date_string.blank?
-      match = date_string.to_s.match(/\b(1[89]\d{2}|20[0-2]\d)\b/)
-      match ? match[1].to_i : nil
+    # Try to split a search query into title and author.
+    # Users often search "Title Author" or just "Title".
+    def parse_query(query)
+      # For now, pass the full query as title and let Audible handle it
+      [query, nil]
     end
 
     def truncate_description(desc)
       return nil if desc.blank?
-      desc.length > 500 ? "#{desc[0, 497]}..." : desc
+      # Strip HTML tags from Audnexus summaries
+      cleaned = ActionController::Base.helpers.strip_tags(desc)
+      cleaned.length > 500 ? "#{cleaned[0, 497]}..." : cleaned
     end
   end
 end

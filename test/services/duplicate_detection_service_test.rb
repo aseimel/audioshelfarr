@@ -9,7 +9,7 @@ class DuplicateDetectionServiceTest < ActiveSupport::TestCase
 
   test "allows request for new work" do
     result = DuplicateDetectionService.check(
-      work_id: "OL_NEW_WORK"
+      work_id: "audnexus:B000NEW001"
     )
 
     assert result.allow?
@@ -20,12 +20,12 @@ class DuplicateDetectionServiceTest < ActiveSupport::TestCase
   test "blocks request for same work already acquired" do
     book = Book.create!(
       title: "Existing Book",
-      open_library_work_id: "OL_ACQUIRED",
+      asin: "B000ACQUIRED",
       file_path: "/audiobooks/Author/Book"
     )
 
     result = DuplicateDetectionService.check(
-      work_id: "OL_ACQUIRED"
+      work_id: "audnexus:B000ACQUIRED"
     )
 
     assert result.block?
@@ -36,14 +36,13 @@ class DuplicateDetectionServiceTest < ActiveSupport::TestCase
   test "blocks request for same edition already acquired" do
     book = Book.create!(
       title: "Existing Book",
-      open_library_work_id: "OL_WORK",
-      open_library_edition_id: "OL_EDITION",
+      asin: "B000EDITION",
       file_path: "/audiobooks/Book"
     )
 
     result = DuplicateDetectionService.check(
-      work_id: "OL_WORK",
-      edition_id: "OL_EDITION"
+      work_id: "audnexus:B000EDITION",
+      edition_id: "B000EDITION"
     )
 
     assert result.block?
@@ -54,7 +53,7 @@ class DuplicateDetectionServiceTest < ActiveSupport::TestCase
   test "blocks request when active request exists" do
     book = Book.create!(
       title: "Pending Book",
-      open_library_work_id: "OL_PENDING"
+      asin: "B000PENDING"
     )
 
     request = Request.create!(
@@ -64,7 +63,7 @@ class DuplicateDetectionServiceTest < ActiveSupport::TestCase
     )
 
     result = DuplicateDetectionService.check(
-      work_id: "OL_PENDING"
+      work_id: "audnexus:B000PENDING"
     )
 
     assert result.block?
@@ -76,7 +75,7 @@ class DuplicateDetectionServiceTest < ActiveSupport::TestCase
   test "warns when previous request failed" do
     book = Book.create!(
       title: "Failed Book",
-      open_library_work_id: "OL_FAILED"
+      asin: "B000FAILED"
     )
 
     Request.create!(
@@ -86,7 +85,7 @@ class DuplicateDetectionServiceTest < ActiveSupport::TestCase
     )
 
     result = DuplicateDetectionService.check(
-      work_id: "OL_FAILED"
+      work_id: "audnexus:B000FAILED"
     )
 
     assert result.warn?
@@ -96,7 +95,7 @@ class DuplicateDetectionServiceTest < ActiveSupport::TestCase
   test "warns when previous request was not found" do
     book = Book.create!(
       title: "Not Found Book",
-      open_library_work_id: "OL_NOT_FOUND"
+      asin: "B000NOTFOUND"
     )
 
     Request.create!(
@@ -106,7 +105,7 @@ class DuplicateDetectionServiceTest < ActiveSupport::TestCase
     )
 
     result = DuplicateDetectionService.check(
-      work_id: "OL_NOT_FOUND"
+      work_id: "audnexus:B000NOTFOUND"
     )
 
     assert result.warn?
@@ -115,36 +114,36 @@ class DuplicateDetectionServiceTest < ActiveSupport::TestCase
 
   test "can_request? returns true for allowed" do
     assert DuplicateDetectionService.can_request?(
-      work_id: "OL_BRAND_NEW"
+      work_id: "audnexus:B000BRANDNEW"
     )
   end
 
   test "can_request? returns true for warned" do
     Book.create!(
       title: "Previously Failed",
-      open_library_work_id: "OL_WARN"
+      asin: "B000WARN"
     )
 
     Request.create!(
-      book: Book.find_by(open_library_work_id: "OL_WARN"),
+      book: Book.find_by(asin: "B000WARN"),
       user: @user,
       status: :failed
     )
 
     assert DuplicateDetectionService.can_request?(
-      work_id: "OL_WARN"
+      work_id: "audnexus:B000WARN"
     )
   end
 
   test "can_request? returns false for blocked" do
     Book.create!(
       title: "Acquired",
-      open_library_work_id: "OL_BLOCKED",
+      asin: "B000BLOCKED",
       file_path: "/audiobooks/Book"
     )
 
     refute DuplicateDetectionService.can_request?(
-      work_id: "OL_BLOCKED"
+      work_id: "audnexus:B000BLOCKED"
     )
   end
 end

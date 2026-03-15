@@ -28,7 +28,7 @@ class DuplicateDetectionService
     def check(work_id:, edition_id: nil)
       # Check 1: Same edition already acquired (most specific)
       if edition_id.present?
-        existing = Book.find_by(open_library_edition_id: edition_id)
+        existing = Book.find_by(asin: edition_id) || Book.find_by(open_library_edition_id: edition_id)
         if existing&.acquired?
           return Result.new(
             status: BLOCK,

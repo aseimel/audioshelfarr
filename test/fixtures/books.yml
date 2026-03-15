@@ -1,36 +1,36 @@
 audiobook_acquired:
   title: "The Acquired Audiobook"
   author: "Test Author"
-  open_library_work_id: "OL_AUDIOBOOK_1"
+  asin: "B000TEST01"
   file_path: "/audiobooks/Test Author/The Acquired Audiobook"
   year: 2020
 
 audiobook_pending:
   title: "The Pending Audiobook"
   author: "Another Author"
-  open_library_work_id: "OL_AUDIOBOOK_2"
+  asin: "B000TEST02"
   year: 2019
 
 audiobook_failed:
   title: "The Failed Audiobook"
   author: "Third Author"
-  open_library_work_id: "OL_FAILED_1"
+  asin: "B000TEST03"
   year: 2018
 
 audiobook_not_found_retry_due:
   title: "The Retry Due Audiobook"
   author: "Retry Author"
-  open_library_work_id: "OL_RETRY_DUE"
+  asin: "B000TEST04"
   year: 2021
 
 audiobook_not_found_waiting:
   title: "The Waiting Audiobook"
   author: "Waiting Author"
-  open_library_work_id: "OL_WAITING"
+  asin: "B000TEST05"
   year: 2022
 
 audiobook_max_retries:
   title: "The Max Retries Audiobook"
   author: "Max Author"
-  open_library_work_id: "OL_MAX_RETRIES"
+  asin: "B000TEST06"
   year: 2023

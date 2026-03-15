@@ -7,7 +7,7 @@ class SettingsService
     prowlarr_tags: { type: "string", default: "", category: "prowlarr", description: "Comma-separated tag IDs or names to filter indexers (leave empty for all indexers)" },
 
     # Download Settings (clients are now managed separately via Admin > Download Clients)
-    preferred_download_type: { type: "string", default: "torrent", category: "download", description: "Preferred download type when both available (torrent or usenet)" },
+    preferred_download_type: { type: "string", default: "usenet", category: "download", description: "Preferred download type when both available (torrent or usenet)" },
     download_check_interval: { type: "integer", default: 60, category: "download", description: "Seconds between download status checks" },
     remove_completed_usenet_downloads: { type: "boolean", default: true, category: "download", description: "Remove usenet downloads from client after successful import" },
 
@@ -34,9 +34,6 @@ class SettingsService
     retry_base_delay_hours: { type: "integer", default: 24, category: "queue", description: "Base delay in hours before retrying not_found requests" },
     retry_max_delay_days: { type: "integer", default: 7, category: "queue", description: "Maximum delay in days between retries" },
 
-    # Open Library
-    open_library_search_limit: { type: "integer", default: 20, category: "open_library", description: "Maximum number of search results to return" },
-
     # Health Monitoring
     health_check_interval: { type: "integer", default: 300, category: "health", description: "Seconds between system health checks (default: 5 minutes)" },
 
@@ -60,11 +57,6 @@ class SettingsService
     login_lockout_duration_minutes: { type: "integer", default: 15, category: "security", description: "Duration of login lockout in minutes" },
     api_token: { type: "string", category: "security", default: SecureRandom.base58(32), description: "Authentication token for the API" },
 
-    # Hardcover Integration
-    hardcover_api_token: { type: "string", default: "", category: "hardcover", description: "API token from Hardcover account settings (hardcover.app/account/api)" },
-    metadata_source: { type: "string", default: "auto", category: "hardcover", description: "Primary metadata source: auto (Hardcover first, OpenLibrary fallback), hardcover, or openlibrary" },
-    hardcover_search_limit: { type: "integer", default: 10, category: "hardcover", description: "Maximum number of search results from Hardcover" },
-
     # OIDC/SSO Authentication
     oidc_enabled: { type: "boolean", default: false, category: "oidc", description: "Enable OpenID Connect (OIDC) single sign-on authentication" },
     oidc_provider_name: { type: "string", default: "SSO", category: "oidc", description: "Display name for the OIDC provider (shown on login button)" },
@@ -80,10 +72,8 @@ class SettingsService
     "prowlarr" => "Prowlarr",
     "download" => "Download Settings",
     "audiobookshelf" => "Audiobookshelf",
-    "hardcover" => "Hardcover",
     "paths" => "Output Paths",
     "queue" => "Queue Settings",
-    "open_library" => "Open Library",
     "health" => "Health Monitoring",
     "auto_select" => "Auto-Selection",
     "language" => "Language & Matching",
@@ -186,10 +176,6 @@ class SettingsService
         configured?(:oidc_issuer) &&
         configured?(:oidc_client_id) &&
         configured?(:oidc_client_secret)
-    end
-
-    def hardcover_configured?
-      configured?(:hardcover_api_token)
     end
 
     def api_token

@@ -21,12 +21,12 @@ class SearchController < ApplicationController
           Array.new(@results.size) { [] }
         end
         @error = nil
-      rescue HardcoverClient::ConnectionError, OpenLibraryClient::ConnectionError => e
+      rescue AudnexusClient::ConnectionError => e
         @results = []
         @audiobookshelf_matches = []
         @error = "Unable to connect to metadata service. Please try again later."
         Rails.logger.error("Metadata service connection error: #{e.message}")
-      rescue HardcoverClient::Error, OpenLibraryClient::Error, MetadataService::Error => e
+      rescue AudnexusClient::Error, MetadataService::Error => e
         @results = []
         @audiobookshelf_matches = []
         @error = "Search failed. Please try again."
