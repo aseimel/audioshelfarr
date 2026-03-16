@@ -56,7 +56,7 @@ class DuplicateDetectionService
         if active_request
           return Result.new(
             status: BLOCK,
-            message: "This audiobook already has an active request.",
+            message: "This audiobook is already in the queue.",
             existing_book: existing_book,
             existing_request: active_request
           )
@@ -69,7 +69,7 @@ class DuplicateDetectionService
         if failed_request
           return Result.new(
             status: WARN,
-            message: "A previous request for this audiobook #{failed_request.failed? ? 'failed' : 'was not found'}. You can try again.",
+            message: "This audiobook was previously queued but #{failed_request.failed? ? 'failed' : 'was not found'}. You can try again.",
             existing_book: existing_book,
             existing_request: failed_request
           )

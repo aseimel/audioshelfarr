@@ -88,7 +88,7 @@ class RequestsController < ApplicationController
         SearchJob.perform_later(request.id)
       end
 
-      flash_message = "Request created for #{request.book.display_name}"
+      flash_message = "Added to queue: #{request.book.display_name}"
       flash_message += " (#{warning})" if warning.present?
       redirect_to request, notice: flash_message
     else
@@ -135,18 +135,18 @@ class RequestsController < ApplicationController
     when "searching"
       redirect_to request, notice: "Searching for #{book.display_name}..."
     else
-      redirect_to request, notice: "Request created for #{book.display_name}"
+      redirect_to request, notice: "Added to queue: #{book.display_name}"
     end
   end
 
   def destroy
     unless @request.user == Current.user || Current.user.admin?
-      redirect_to requests_path, alert: "You cannot cancel this request"
+      redirect_to requests_path, alert: "Cannot remove this item"
       return
     end
 
     unless @request.can_be_cancelled?
-      redirect_to @request, alert: "Cannot cancel request in #{@request.status} status"
+      redirect_to @request, alert: "Cannot remove item in #{@request.status} status"
       return
     end
 
@@ -164,17 +164,17 @@ class RequestsController < ApplicationController
       book.destroy
     end
 
-    redirect_back fallback_location: requests_path, notice: "Request cancelled"
+    redirect_back fallback_location: requests_path, notice: "Removed from queue"
   end
 
   def retry
     unless Current.user.admin?
-      redirect_back fallback_location: @request, alert: "You don't have permission to retry requests"
+      redirect_back fallback_location: @request, alert: "You don't have permission to retry"
       return
     end
 
     @request.retry_now!
-    redirect_back fallback_location: @request, notice: "Request has been queued for retry."
+    redirect_back fallback_location: @request, notice: "Queued for retry."
   end
 
   def download

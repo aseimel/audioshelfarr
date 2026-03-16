@@ -20,7 +20,7 @@ class RequestsControllerTest < ActionDispatch::IntegrationTest
   test "index shows user's requests" do
     get requests_path
     assert_response :success
-    assert_select "h1", "My Requests"
+    assert_select "h1", "My Queue"
   end
 
   test "admin sees all requests" do
@@ -28,7 +28,7 @@ class RequestsControllerTest < ActionDispatch::IntegrationTest
     sign_in_as(@admin)
     get requests_path
     assert_response :success
-    assert_select "h1", "All Requests"
+    assert_select "h1", "Download Queue"
   end
 
   test "index filters by status" do
@@ -215,7 +215,7 @@ class RequestsControllerTest < ActionDispatch::IntegrationTest
       delete request_path(@pending_request)
     end
     assert_redirected_to requests_path
-    assert_equal "Request cancelled", flash[:notice]
+    assert_equal "Removed from queue", flash[:notice]
   end
 
   test "destroy cancels failed request" do
@@ -257,7 +257,7 @@ class RequestsControllerTest < ActionDispatch::IntegrationTest
     end
 
     assert_redirected_to request_path(@pending_request)
-    assert_includes flash[:alert], "Cannot cancel"
+    assert_includes flash[:alert], "Cannot remove"
   end
 
   test "user cannot cancel another user's request" do
@@ -278,7 +278,7 @@ class RequestsControllerTest < ActionDispatch::IntegrationTest
     post retry_request_path(@failed_request)
 
     assert_response :redirect
-    assert_equal "You don't have permission to retry requests", flash[:alert]
+    assert_equal "You don't have permission to retry", flash[:alert]
   end
 
   test "admin can retry a request" do
@@ -293,7 +293,7 @@ class RequestsControllerTest < ActionDispatch::IntegrationTest
     assert @failed_request.pending?
     assert_not @failed_request.attention_needed?
     assert_nil @failed_request.issue_description
-    assert_equal "Request has been queued for retry.", flash[:notice]
+    assert_equal "Queued for retry.", flash[:notice]
   end
 
   test "retry redirects back to referring page" do

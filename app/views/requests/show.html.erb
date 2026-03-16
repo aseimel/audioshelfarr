@@ -1,6 +1,6 @@
 <div class="mx-auto max-w-2xl">
   <div class="mb-6">
-    <%= link_to "&larr; Back to Requests".html_safe, requests_path, class: "text-blue-400 hover:text-blue-300" %>
+    <%= link_to "&larr; Back to Queue".html_safe, requests_path, class: "text-blue-400 hover:text-blue-300" %>
   </div>
 
   <div class="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
@@ -14,7 +14,7 @@
               class="w-full rounded shadow"
             >
           <% else %>
-            <div class="w-full aspect-[2/3] bg-gray-800 rounded shadow flex items-center justify-center">
+            <div class="w-full aspect-square bg-gray-800 rounded shadow flex items-center justify-center">
               <svg class="w-10 h-10 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
               </svg>
@@ -60,7 +60,7 @@
             </svg>
             <div>
               <h3 class="text-sm font-medium text-red-400">Attention Required</h3>
-              <p class="text-sm text-red-400/80 mt-1"><%= @request.issue_description || "This request needs your attention." %></p>
+              <p class="text-sm text-red-400/80 mt-1"><%= @request.issue_description || "This item needs your attention." %></p>
             </div>
           </div>
         </div>
@@ -109,12 +109,12 @@
       <dl class="grid grid-cols-2 gap-4 text-sm">
         <% if Current.user.admin? %>
           <div>
-            <dt class="text-gray-500">Requested by</dt>
+            <dt class="text-gray-500">Added by</dt>
             <dd class="font-medium text-white"><%= @request.user.name %></dd>
           </div>
         <% end %>
         <div>
-          <dt class="text-gray-500">Requested</dt>
+          <dt class="text-gray-500">Added</dt>
           <dd class="font-medium text-white"><%= @request.created_at.strftime("%B %d, %Y at %I:%M %p") %></dd>
         </div>
         <% if @request.completed_at.present? %>
@@ -193,7 +193,7 @@
     <% if @request.can_be_cancelled? || (Current.user.admin? && @request.can_retry?) %>
       <div class="px-6 py-4 bg-gray-800/50 border-t border-gray-800 flex justify-end gap-3" data-controller="delete-modal">
         <% if Current.user.admin? && @request.can_retry? %>
-          <%= button_to "Retry Request", retry_request_path(@request),
+          <%= button_to "Retry", retry_request_path(@request),
               method: :post,
               class: "px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition" %>
         <% end %>
@@ -202,15 +202,15 @@
           <button type="button"
                   class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded-lg transition"
                   data-action="click->delete-modal#open">
-            Cancel Request
+            Remove
           </button>
 
           <dialog data-delete-modal-target="modal"
                   class="bg-gray-900 border border-gray-700 rounded-lg p-0 backdrop:bg-black/50 max-w-md w-full"
                   data-action="click->delete-modal#backdropClick">
             <div class="p-6">
-              <h3 class="text-lg font-semibold text-white mb-2">Cancel Request</h3>
-              <p class="text-gray-400 mb-4">Are you sure you want to cancel this request for "<%= @request.book.title %>"?</p>
+              <h3 class="text-lg font-semibold text-white mb-2">Remove from Queue</h3>
+              <p class="text-gray-400 mb-4">Remove "<%= @request.book.title %>" from queue?</p>
 
               <%= form_with url: request_path(@request), method: :delete, local: true, class: "space-y-4" do |f| %>
                 <% if @request.downloads.any? { |d| d.external_id.present? && d.download_client.present? } %>
@@ -225,11 +225,11 @@
                   <button type="button"
                           class="px-4 py-2 text-gray-400 hover:text-white transition"
                           data-action="click->delete-modal#close">
-                    Keep Request
+                    Keep
                   </button>
                   <button type="submit"
                           class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-medium rounded-lg transition">
-                    Cancel Request
+                    Remove
                   </button>
                 </div>
               <% end %>

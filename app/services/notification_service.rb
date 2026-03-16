@@ -17,7 +17,7 @@ class NotificationService
         user: request.user,
         notifiable: request,
         type: "request_failed",
-        title: "Request Failed",
+        title: "Download Failed",
         message: "\"#{request.book.title}\" could not be downloaded."
       )
     end

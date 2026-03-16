@@ -144,7 +144,7 @@ class SearchJob < ApplicationJob
   def attempt_auto_select(request)
     unless @force_auto_select || SettingsService.get(:auto_select_enabled, default: true)
       # Auto-select disabled, flag for manual selection
-      request.mark_for_attention!("Search results found. Please review and select a result to download.")
+      request.mark_for_attention!("Results found. Review and select a result to download.")
       Rails.logger.info "[SearchJob] Auto-select disabled, flagged for manual selection for request ##{request.id}"
       return
     end
@@ -155,7 +155,7 @@ class SearchJob < ApplicationJob
       Rails.logger.info "[SearchJob] Auto-selected result for request ##{request.id}"
     else
       # Auto-select failed to find a suitable result, flag for manual selection
-      request.mark_for_attention!("Search results found but none matched auto-select criteria. Please review and select a result manually.")
+      request.mark_for_attention!("Results found but none matched auto-select criteria. Select a result manually.")
       Rails.logger.info "[SearchJob] Auto-select failed, flagged for manual selection for request ##{request.id}"
     end
   end

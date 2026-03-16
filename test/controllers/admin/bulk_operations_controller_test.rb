@@ -23,7 +23,7 @@ class Admin::BulkOperationsControllerTest < ActionDispatch::IntegrationTest
     post retry_selected_admin_bulk_operations_path, params: { request_ids: [@failed_request.id, @max_retries_request.id] }
 
     assert_redirected_to requests_path(attention: "true")
-    assert_includes flash[:notice], "2 requests queued for retry"
+    assert_includes flash[:notice], "2 items queued for retry"
 
     assert_equal "pending", @failed_request.reload.status
     assert_equal "pending", @max_retries_request.reload.status
@@ -33,14 +33,14 @@ class Admin::BulkOperationsControllerTest < ActionDispatch::IntegrationTest
     post retry_selected_admin_bulk_operations_path, params: { request_ids: [] }
 
     assert_redirected_to requests_path(attention: "true")
-    assert_includes flash[:notice], "0 requests"
+    assert_includes flash[:notice], "0 items"
   end
 
   test "cancel_selected cancels selected requests" do
     post cancel_selected_admin_bulk_operations_path, params: { request_ids: [@failed_request.id] }
 
     assert_redirected_to requests_path(attention: "true")
-    assert_includes flash[:notice], "1 request cancelled"
+    assert_includes flash[:notice], "1 item removed"
 
     assert_equal "failed", @failed_request.reload.status
   end

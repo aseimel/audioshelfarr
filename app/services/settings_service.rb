@@ -21,17 +21,17 @@ class SettingsService
     audiobook_output_path: { type: "string", default: "/audiobooks", category: "paths", description: "Directory for completed audiobooks" },
     audiobook_path_template: { type: "string", default: "{author}/{title}", category: "paths", description: "Folder structure for audiobooks. Variables: {author}, {title}, {year}, {publisher}, {language}, {series}, {narrator}" },
     audiobook_filename_template: { type: "string", default: "{author} - {title}", category: "paths", description: "Filename for audiobooks (extension added automatically). Variables: {author}, {title}, {year}, {series}, {narrator}" },
-    download_remote_path: { type: "string", default: "", category: "paths", description: "Download client path (host path, e.g., /mnt/media/Torrents/Completed)" },
-    download_local_path: { type: "string", default: "/downloads", category: "paths", description: "Container path for downloads (e.g., /downloads)" },
+    download_remote_path: { type: "string", default: "", category: "paths", description: "Download client path (host path, e.g., /mnt/media/Torrents/Completed). Leave blank if download client and Shelfarr share the same /downloads mount" },
+    download_local_path: { type: "string", default: "/downloads", category: "paths", description: "Container path for downloads (e.g., /downloads). Only needed when download_remote_path is configured" },
 
     # Queue Settings
-    immediate_search_enabled: { type: "boolean", default: true, category: "queue", description: "Start searching immediately when a request is created (instead of waiting for queue cycle)" },
-    queue_batch_size: { type: "integer", default: 5, category: "queue", description: "Number of requests to process per queue run" },
+    immediate_search_enabled: { type: "boolean", default: true, category: "queue", description: "Start searching immediately when an item is added to the queue (instead of waiting for queue cycle)" },
+    queue_batch_size: { type: "integer", default: 5, category: "queue", description: "Number of items to process per queue run" },
     rate_limit_delay: { type: "integer", default: 2, category: "queue", description: "Seconds between API calls" },
     max_retries: { type: "integer", default: 10, category: "queue", description: "Maximum retry attempts before flagging for attention" },
 
     # Retry Settings
-    retry_base_delay_hours: { type: "integer", default: 24, category: "queue", description: "Base delay in hours before retrying not_found requests" },
+    retry_base_delay_hours: { type: "integer", default: 24, category: "queue", description: "Base delay in hours before retrying not-found items" },
     retry_max_delay_days: { type: "integer", default: 7, category: "queue", description: "Maximum delay in days between retries" },
 
     # Health Monitoring
@@ -43,8 +43,8 @@ class SettingsService
     auto_select_confidence_threshold: { type: "integer", default: 70, category: "auto_select", description: "Minimum confidence score (0-100) for auto-selection" },
 
     # Language Settings
-    default_language: { type: "string", default: "en", category: "language", description: "Default language for new requests" },
-    enabled_languages: { type: "json", default: '["en"]', category: "language", description: "Languages available for selection when creating requests" },
+    default_language: { type: "string", default: "en", category: "language", description: "Default language for new queue items" },
+    enabled_languages: { type: "json", default: '["en"]', category: "language", description: "Languages available when adding to queue" },
     min_match_confidence: { type: "integer", default: 50, category: "language", description: "Minimum confidence score (0-100) to display a search result" },
 
     # Updates

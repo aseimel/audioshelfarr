@@ -67,7 +67,7 @@ class DuplicateDetectionServiceTest < ActiveSupport::TestCase
     )
 
     assert result.block?
-    assert_includes result.message, "active request"
+    assert_includes result.message, "already in the queue"
     assert_equal book, result.existing_book
     assert_equal request, result.existing_request
   end

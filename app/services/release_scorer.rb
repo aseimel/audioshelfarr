@@ -154,13 +154,11 @@ class ReleaseScorer
   end
 
   # Format matching score (0-100)
-  # Boosts audiobook releases, penalizes ebook-only releases
+  # Boosts audiobook releases
   def calculate_format_score
     case @parsed[:format]
     when :audiobook
       100  # Strong positive signal
-    when :ebook
-      0    # Strong negative signal - this is an ebook, not an audiobook
     else
       50   # Neutral - no format indicators detected
     end

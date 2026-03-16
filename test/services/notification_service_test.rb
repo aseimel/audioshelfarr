@@ -28,7 +28,7 @@ class NotificationServiceTest < ActiveSupport::TestCase
 
     notification = Notification.last
     assert_equal "request_failed", notification.notification_type
-    assert_equal "Request Failed", notification.title
+    assert_equal "Download Failed", notification.title
   end
 
   test "request_attention creates notification" do

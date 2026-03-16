@@ -160,6 +160,12 @@ class PostProcessingJob < ApplicationJob
 
     Rails.logger.info "[PostProcessingJob] Path remapping - original path from download client: #{path}"
 
+    # If path already exists on disk (shared mount), no remapping needed
+    if File.exist?(path)
+      Rails.logger.info "[PostProcessingJob] Path accessible without remapping: #{path}"
+      return path
+    end
+
     # Try global settings first - these do proper prefix replacement
     # which preserves the full path structure (including category subfolders)
     remote_path = SettingsService.get(:download_remote_path)

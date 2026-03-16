@@ -58,7 +58,7 @@
   <% card_content = capture do %>
     <div class="relative rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:scale-[1.02] bg-gray-900">
       <%# Poster Image %>
-      <div class="aspect-[2/3] relative">
+      <div class="aspect-square relative">
         <% if cover_url.present? %>
           <img
             src="<%= cover_url.respond_to?(:call) ? cover_url.call(size: :m) : cover_url %>"

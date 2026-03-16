@@ -8,14 +8,14 @@
         </svg>
       </div>
       <%= link_to search_path, class: "block w-full pl-12 pr-4 py-4 border border-gray-800 rounded-xl text-gray-500 bg-gray-900 hover:border-gray-700 hover:bg-gray-800 transition-all" do %>
-        Search for books by title or author...
+        Search for audiobooks by title or author...
       <% end %>
     </div>
   </div>
 
   <%# Stats Grid %>
   <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-10">
-    <%# Pending Requests %>
+    <%# Pending %>
     <%= link_to requests_path(status: "active"), class: "bg-gray-900 rounded-xl border border-gray-800 p-5 hover:border-gray-700 transition" do %>
       <div class="flex items-center gap-4">
         <div class="p-3 rounded-lg bg-blue-500/20">
@@ -111,7 +111,7 @@
         <% @recent_books.each do |book| %>
           <%= link_to library_path(book), class: "group flex-shrink-0 w-36" do %>
             <div class="relative rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.03] bg-gray-900 ring-1 ring-gray-800">
-              <div class="aspect-[2/3] relative">
+              <div class="aspect-square relative">
                 <% if book.cover_url.present? %>
                   <img
                     src="<%= book.cover_url %>"
@@ -152,11 +152,11 @@
     </div>
   <% end %>
 
-  <%# Recent Requests %>
+  <%# Recent Activity %>
   <% if @recent_requests.any? %>
     <div class="mb-10">
       <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-bold text-white">Recent Requests</h2>
+        <h2 class="text-xl font-bold text-white">Recent Activity</h2>
         <%= link_to "View All", requests_path, class: "text-sm text-blue-400 hover:text-blue-300 font-medium" %>
       </div>
       <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
@@ -164,7 +164,7 @@
           <% book = request.book %>
           <%= link_to request_path(request), class: "group" do %>
             <div class="relative rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-[1.03] bg-gray-900 ring-1 ring-gray-800">
-              <div class="aspect-[2/3] relative">
+              <div class="aspect-square relative">
                 <% if book.cover_url.present? %>
                   <img
                     src="<%= book.cover_url %>"
@@ -215,7 +215,7 @@
 
                 <%# Hover Overlay %>
                 <div class="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-3">
-                  <span class="text-white text-sm font-medium">View Request</span>
+                  <span class="text-white text-sm font-medium">View Details</span>
                 </div>
               </div>
 
@@ -262,12 +262,12 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
       </svg>
       <h3 class="text-lg font-medium text-gray-300 mb-2">Welcome to Shelfarr</h3>
-      <p class="text-gray-500 mb-6">Start by searching for your favorite books</p>
+      <p class="text-gray-500 mb-6">Start by searching for your favorite audiobooks</p>
       <%= link_to search_path, class: "inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition" do %>
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
-        Search Books
+        Search Audiobooks
       <% end %>
     </div>
   <% end %>

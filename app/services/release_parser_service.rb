@@ -219,19 +219,6 @@ class ReleaseParserService
     /\bvoice\b/i
   ].freeze
 
-  # Ebook-only format indicators (negative signal for audiobook search)
-  EBOOK_PATTERNS = [
-    /\bepub\b/i,
-    /\.epub\b/i,
-    /\bmobi\b/i,
-    /\.mobi\b/i,
-    /\bpdf\b/i,
-    /\.pdf\b/i,
-    /\bazw3?\b/i,
-    /\bcbr\b/i,
-    /\bcbz\b/i
-  ].freeze
-
   class << self
     # Parse a release title and extract metadata
     # @param title [String] The release title to parse
@@ -274,19 +261,14 @@ class ReleaseParserService
       MULTI_LANGUAGE_PATTERNS.any? { |pattern| title.match?(pattern) }
     end
 
-    # Detect if the format is audiobook or ebook from the title
+    # Detect if the format is audiobook from the title
     # @param title [String] The release title
-    # @return [Symbol, nil] :audiobook, :ebook, or nil if unknown
+    # @return [Symbol, nil] :audiobook or nil if unknown
     def detect_format(title)
       return nil if title.blank?
 
-      is_audiobook = AUDIOBOOK_PATTERNS.any? { |p| title.match?(p) }
-      is_ebook = EBOOK_PATTERNS.any? { |p| title.match?(p) }
-
-      if is_audiobook
+      if AUDIOBOOK_PATTERNS.any? { |p| title.match?(p) }
         :audiobook
-      elsif is_ebook
-        :ebook
       end
     end
 

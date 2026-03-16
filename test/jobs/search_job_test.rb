@@ -102,7 +102,7 @@ class SearchJobTest < ActiveJob::TestCase
 
       assert @request.searching?
       assert @request.attention_needed?
-      assert_includes @request.issue_description, "Please review and select a result"
+      assert_includes @request.issue_description, "Review and select a result"
     end
   end
 

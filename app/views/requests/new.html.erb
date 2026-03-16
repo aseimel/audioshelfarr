@@ -1,5 +1,5 @@
 <div class="mx-auto max-w-2xl">
-  <h1 class="font-bold text-4xl mb-8 text-white">Request Audiobook</h1>
+  <h1 class="font-bold text-4xl mb-8 text-white">Add to Queue</h1>
 
   <div class="bg-gray-900 rounded-lg shadow p-6 border border-gray-800">
     <div class="flex gap-6 mb-6">
@@ -12,7 +12,7 @@
             onerror="this.onerror=null; this.src='<%= public_asset_path('images/no-cover.svg') %>';"
           >
         <% else %>
-          <div class="w-full aspect-[2/3] bg-gray-700 rounded shadow flex items-center justify-center">
+          <div class="w-full aspect-square bg-gray-700 rounded shadow flex items-center justify-center">
             <svg class="w-10 h-10 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
             </svg>
@@ -67,7 +67,7 @@
               <option value="<%= code %>" <%= 'selected' if code == @default_language %>><%= name %></option>
             <% end %>
           </select>
-          <p class="mt-1 text-xs text-gray-500">Preferred language for this request</p>
+          <p class="mt-1 text-xs text-gray-500">Preferred language</p>
         </div>
 
         <div>
@@ -82,7 +82,7 @@
         </div>
 
         <div class="flex gap-4">
-          <%= form.submit "Request Audiobook", class: "flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition cursor-pointer" %>
+          <%= form.submit "Add to Queue", class: "flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition cursor-pointer" %>
           <%= link_to "Cancel", search_path, class: "px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 font-medium rounded-lg transition" %>
         </div>
       <% end %>

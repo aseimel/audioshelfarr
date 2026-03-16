@@ -1,7 +1,7 @@
 <div class="mx-auto max-w-4xl">
   <div class="flex justify-between items-center mb-6">
-    <h1 class="font-bold text-4xl text-white"><%= Current.user.admin? ? "All Requests" : "My Requests" %></h1>
-    <%= link_to "Search Books", search_path, class: "px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition" %>
+    <h1 class="font-bold text-4xl text-white"><%= Current.user.admin? ? "Download Queue" : "My Queue" %></h1>
+    <%= link_to "Search Audiobooks", search_path, class: "px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition" %>
   </div>
 
   <%# Filter Tabs %>
@@ -48,26 +48,26 @@
         </svg>
         <h3 class="text-lg font-medium text-white mb-2">
           <% if params[:attention] == "true" %>
-            No requests need attention
+            Nothing needs attention
           <% else %>
-            No matching requests
+            No matching items
           <% end %>
         </h3>
         <p class="text-gray-500 mb-4">
           <% if params[:attention] == "true" %>
-            All requests are processing normally.
+            All items are processing normally.
           <% else %>
-            No requests match your current filter.
+            Nothing matches your current filter.
           <% end %>
         </p>
-        <%= link_to "View All Requests", requests_path, class: "inline-flex items-center px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition" %>
+        <%= link_to "View All", requests_path, class: "inline-flex items-center px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg transition" %>
       <% else %>
         <svg class="mx-auto h-12 w-12 text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
         </svg>
-        <h3 class="text-lg font-medium text-white mb-2">No requests yet</h3>
-        <p class="text-gray-500 mb-4">Search for books and request them to add to your library.</p>
-        <%= link_to "Search Books", search_path, class: "inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition" %>
+        <h3 class="text-lg font-medium text-white mb-2">Queue is empty</h3>
+        <p class="text-gray-500 mb-4">Search for audiobooks to add to your queue.</p>
+        <%= link_to "Search Audiobooks", search_path, class: "inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition" %>
       <% end %>
     </div>
   <% else %>
@@ -76,7 +76,7 @@
         <% has_view_results = Current.user.admin? && request.searching? && request.search_results.any? %>
         <div class="bg-gray-900 border border-gray-800 rounded-lg p-4 hover:border-gray-700 transition" <%= "data-controller=search-results" if has_view_results %>>
           <div class="flex gap-4">
-            <div class="flex-shrink-0 w-16 aspect-[2/3] bg-gray-800 rounded shadow overflow-hidden">
+            <div class="flex-shrink-0 w-16 aspect-square bg-gray-800 rounded shadow overflow-hidden">
               <% if request.book.cover_url.present? %>
                 <img
                   src="<%= request.book.cover_url %>"
@@ -124,9 +124,9 @@
               <%# Metadata row %>
               <div class="mt-2 flex items-center gap-4 text-xs text-gray-500">
                 <% if Current.user.admin? && request.user != Current.user %>
-                  <span>Requested by <%= request.user.name %></span>
+                  <span>Added by <%= request.user.name %></span>
                 <% end %>
-                <span>Requested <%= time_ago_in_words(request.created_at) %> ago</span>
+                <span>Added <%= time_ago_in_words(request.created_at) %> ago</span>
                 <% if request.completed_at.present? %>
                   <span>Completed <%= time_ago_in_words(request.completed_at) %> ago</span>
                 <% end %>
@@ -164,7 +164,7 @@
                         <% if has_cancel %>
                           <%= button_to request_path(request), method: :delete,
                               class: "inline-flex items-center px-2 py-1 text-xs bg-red-600 hover:bg-red-500 text-white rounded font-medium transition whitespace-nowrap",
-                              data: { turbo_confirm: "Cancel request for \"#{request.book.title}\"?" } do %>
+                              data: { turbo_confirm: "Remove \"#{request.book.title}\" from queue?" } do %>
                             Cancel
                           <% end %>
                         <% end %>
