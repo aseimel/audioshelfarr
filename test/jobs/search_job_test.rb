@@ -145,19 +145,18 @@ class SearchJobTest < ActiveJob::TestCase
     # Set request language to French
     @request.update!(language: "fr")
 
-    VCR.turned_off do
-      # Stub that verifies "French" is in the query
-      stub_request(:get, %r{localhost:9696/api/v1/search})
-        .with { |req| req.uri.query_values["query"].include?("French") }
-        .to_return(
-          status: 200,
-          headers: { "Content-Type" => "application/json" },
-          body: [].to_json
-        )
+    french_query_seen = false
 
-      assert_nothing_raised do
-        SearchJob.perform_now(@request.id)
-      end
+    VCR.turned_off do
+      # Stub all search requests, track if any contain "French"
+      stub_request(:get, %r{localhost:9696/api/v1/search})
+        .to_return do |req|
+          french_query_seen = true if req.uri.query_values["query"].include?("French")
+          { status: 200, headers: { "Content-Type" => "application/json" }, body: [].to_json }
+        end
+
+      SearchJob.perform_now(@request.id)
+      assert french_query_seen, "Expected at least one query to include 'French'"
     end
   end
 

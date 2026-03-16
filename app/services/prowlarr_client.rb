@@ -29,22 +29,26 @@ class ProwlarrClient
     end
   end
 
-  # Newznab/Prowlarr category ID for audiobooks
-  AUDIOBOOK_CATEGORIES = [3030, 3000, 7000, 7020].freeze  # Audio/Audiobook + Audio (parent) + Books (parent) + Books/Ebook
+  # Newznab/Prowlarr category IDs that may contain audiobooks
+  # Not used for filtering (indexers use inconsistent categories) — kept for reference
+  AUDIOBOOK_CATEGORIES = [3030, 3000, 7000, 7020].freeze
 
   class << self
     # Search for audiobooks via Prowlarr indexers
     # Returns array of Result
+    # NOTE: We intentionally do NOT filter by category. Indexers categorize audiobooks
+    # inconsistently (8000, 127246, 103030, etc.) so category filtering misses results.
+    # Instead we rely on the release scorer to rank audiobook-format results higher.
     def search(query, categories: nil, limit: 100)
       ensure_configured!
 
-      # Use general search type to get results from all categories
-      # limit defaults to 100 to match Prowlarr UI behavior (0 returns no results)
       params = { query: query, type: "search", limit: limit }
 
-      # Apply category filtering for audiobooks
-      cats = categories || AUDIOBOOK_CATEGORIES
-      params[:categories] = Array(cats) if cats.present?
+      # Only apply categories if explicitly passed (used by fallback search)
+      # Default is no category filter to maximize results
+      if categories.is_a?(Array) && categories.any?
+        params[:categories] = categories
+      end
 
       # Filter by indexer tags if configured
       indexer_ids = filtered_indexer_ids
@@ -190,7 +194,7 @@ class ProwlarrClient
         f.response :json, parser_options: { symbolize_names: false }
         f.adapter Faraday.default_adapter
         f.headers["X-Api-Key"] = api_key
-        f.options.timeout = 30
+        f.options.timeout = 120
         f.options.open_timeout = 10
       end
     end

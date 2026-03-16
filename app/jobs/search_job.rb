@@ -52,28 +52,31 @@ class SearchJob < ApplicationJob
     book = request.book
     language_term = should_add_language_to_search?(request) ? language_search_term(request) : nil
 
-    # Try multiple query variations (stop on first results found)
+    # Try query variations, stop on first results found.
+    # Fewer variations = fewer slow Prowlarr round-trips (each can take 30-120s with many indexers).
     queries = build_query_variations(book, language_term)
+
+    all_results = []
 
     queries.each do |query|
       Rails.logger.info "[SearchJob] Trying query: #{query}"
-      results = ProwlarrClient.search(query)
-      if results.any?
-        Rails.logger.info "[SearchJob] Found #{results.count} results with query: #{query}"
-        return results
+      begin
+        results = ProwlarrClient.search(query)
+        if results.any?
+          Rails.logger.info "[SearchJob] Found #{results.count} results with query: #{query}"
+          all_results.concat(results)
+          # If we got enough results from a specific query, stop early
+          break if all_results.size >= 10
+        end
+      rescue ProwlarrClient::ConnectionError => e
+        # Timeout on one query shouldn't abort the whole search — try next variation
+        Rails.logger.warn "[SearchJob] Query timed out: #{query} (#{e.message})"
+        next
       end
     end
 
-    # Fallback: try title-only query WITHOUT category filter to catch audiobooks in unexpected categories
-    fallback_query = language_term ? "#{book.title} #{language_term}" : book.title
-    Rails.logger.info "[SearchJob] Trying category-less fallback query: #{fallback_query}"
-    results = ProwlarrClient.search(fallback_query, categories: [])
-    if results.any?
-      Rails.logger.info "[SearchJob] Found #{results.count} results with category-less fallback"
-      return results
-    end
-
-    [] # No results from any query
+    # Deduplicate by guid
+    all_results.uniq(&:guid)
   end
 
   def build_query_variations(book, language_term)
@@ -83,32 +86,25 @@ class SearchJob < ApplicationJob
 
     queries = []
 
-    # Variation 1: author + title (most specific)
-    if author.present?
-      base = "#{author} #{title}"
-      queries << (language_term ? "#{base} #{language_term}" : base)
-      queries << (language_term ? "#{base} audiobook #{language_term}" : "#{base} audiobook")
-    end
-
-    # Variation 2: title + author (reversed)
+    # Variation 1: title + author (most natural, matches how indexers name releases)
     if author.present?
       base = "#{title} #{author}"
       queries << (language_term ? "#{base} #{language_term}" : base)
-      queries << (language_term ? "#{base} audiobook #{language_term}" : "#{base} audiobook")
     end
 
-    # Variation 3: title only (broader)
+    # Variation 2: title + audiobook keyword (helps surface audiobook-specific results)
+    if author.present?
+      queries << "#{author} #{title} audiobook"
+    else
+      queries << "#{title} audiobook"
+    end
+
+    # Variation 3: title only (broadest)
     queries << (language_term ? "#{title} #{language_term}" : title)
 
-    # Variation 4: short title + author (stripped subtitle)
+    # Variation 4: short title (stripped subtitle) + author
     if short_title != title && author.present?
-      base = "#{short_title} #{author}"
-      queries << (language_term ? "#{base} #{language_term}" : base)
-    end
-
-    # Variation 5: short title only
-    if short_title != title
-      queries << (language_term ? "#{short_title} #{language_term}" : short_title)
+      queries << "#{short_title} #{author}"
     end
 
     queries.uniq
